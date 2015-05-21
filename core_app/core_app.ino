@@ -17,10 +17,20 @@
 // #        wiki link- http://www.dfrobot.com/wiki/index.php/GPS/GPRS/GSM_Module_V3.0_(SKU:TEL0051)
  
 #include "gps_gsm_sim908.h"
-#include <Bridge.h>
-#include <YunMQTTClient.h>
+#include "MQTTClient.h"
+#include <GSM.h>
 
 
+char *server = "matheusfonseca.me";
+int port = 1883;
+
+GSMClient client;
+GPRS gprs;
+GSM gsmAccess;
+
+MQTTClient mqttClient(server,port,client);
+
+bool notConnected = false;
 
 int8_t sendATcommand(char* ATcommand, char* expected_answer, unsigned int timeout);
 
@@ -49,13 +59,21 @@ void setup()
       delay(5000);
   }
   //cliente para o servidor matheusfonseca.me 
-  YunMQTTClient client("matheusfonseca.me", 1883);
   
-  Bridge.begin();
-  client.installBridge(false);
+   while(notConnected)
+{
+  if((gsmAccess.begin() == GSM_READY) &&
+  (gprs.attachGPRS("zap.vivo.com.br", "vivo", "vivo") == GPRS_READY))
+    notConnected = false;
+  else
+  {
+    Serial.println("Not connected");
+    delay(1000);
+  }
+}
   
   Serial.println("connecting...");
-  if (client.connect("arduino", "sisafa_user", "T5KIP1")) {
+  if (mqttClient.connect("arduino", "sisafa_user", "T5KIP1")) {
     Serial.println("connected!");
     //client.subscribe("/another/topic");
     // client.unsubscribe("/another/topic");
@@ -111,5 +129,13 @@ int8_t sendATcommand(char* ATcommand, char* expected_answer, unsigned int timeou
     }while((answer == 0) && ((millis() - previous) < timeout));   
 
     return answer;
+}
+
+void messageReceived(String topic, String payload, char * bytes, unsigned int length) {
+Serial.print("incomming: ");
+Serial.print(topic);
+Serial.print(" - ");
+Serial.print(payload);
+Serial.println();
 }
 
