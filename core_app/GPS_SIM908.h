@@ -1,3 +1,17 @@
+/*
+ * GPS_SIM908.h
+ *
+ * Created on: Mai 25, 2015
+ * Author: Arthur Jahn
+ * E-Mail: stutrzbecher@gmail.com
+ *
+ * Description: 
+ * This file contains the implementations of the GPS_SIM908, based
+ * on arduino DFRobot libs (http://goo.gl/39ZXqm) 
+ * by using AT commands suppported by SIM908 SIMCOM chip, 
+ * used for handling GPS data receiving and formatting.
+ */
+
 
 #include<Arduino.h>
 
