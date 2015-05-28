@@ -5,9 +5,9 @@
  * Author: Arthur Jahn
  * E-Mail: stutrzbecher@gmail.com
  *
- * Description: 
+ * Description:
  * This file contains the implementation of the SIM908Client.h
- * definitions. It implements a GPRS web client based on AT 
+ * definitions. It implements a GPRS web client based on AT
  * commands suppported by SIM908 SIMCOM chip, used for handling
  * GPS/GSM connections.
  */
@@ -45,7 +45,8 @@ void SIM908Client::begin(int speed)
     delay(1200);
     digitalWrite(_pwrPin, LOW);
     delay(6000);
-    enableGsm(); //start shield in gsm mode.
+    //start shield in gsm mode.
+    enableGsm();
 
     tries = 3;
     while ((_state == STATE_INACTIVE) && (tries-- > 0)) {
@@ -90,7 +91,7 @@ uint8_t SIM908Client::pin(const char *pin)
     tries = 3;
     do {
         voidReadBuffer();
-        
+
         _modem.print(F("AT+CPIN="));
         _modem.println(pin);
         _modem.flush();
@@ -120,17 +121,17 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
 
   //Check network registration status
   if (sendAndAssert(F("AT+CREG=1"), F("OK"), 2000, 3, 5000) != _S908_RECV_OK)
-      return 0;      
+      return 0;
 
   if (sendAndAssert(F("AT+CREG?"), F("+CREG: 1,1"), 2000, 3, 5000) != _S908_RECV_OK)
-      _modem.println("CREG");           
-    
+      _modem.println("CREG");
+
   if (sendAndAssert(F("AT+CGDCONT=1,\"IP\",\"zap.vivo.com.br\""), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
-      return 0;   
+      return 0;
 
   if (sendAndAssert(F("AT+CGPCO=0,”vivo”,”vivo”,1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
-  
+
   if (sendAndAssert(F("AT+CGACT=1,1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
 
@@ -154,16 +155,16 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
 
   if (res != _S908_RECV_OK)
       return 0;
- 
+
   //Bring up the GPRS connection
   if (sendAndAssert(F("AT+CIICR"), F("OK"), 2000, 3, 5000) != _S908_RECV_OK)
       return 0;
-      
+
   if (sendAndAssert(F("AT+CIICR"), F("+PDP Deact"), 2000, 3, 5000) == _S908_RECV_OK)
       _modem.println("+PDP Deact");
-   
-   
-      
+
+
+
   delay(3000);
   //Verify if it has the local IP address
   if (sendAndAssert(F("AT+CIFSR"), F("ERROR"), 2000, 3, 1000) == _S908_RECV_OK)

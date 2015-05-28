@@ -5,7 +5,7 @@
  * Author: Arthur Jahn
  * E-Mail: stutrzbecher@gmail.com
  *
- * Description: 
+ * Description:
  * This file contains the definitions of the SIM908Client, based
  * on arduino Client.h interface, by using AT commands suppported
  * by SIM908 SIMCOM chip, used for handling GPS/GSM connections.
@@ -13,6 +13,7 @@
 
 #ifndef SIM908CLIENT_H
 #define SIM908CLIENT_H
+
 #include "Arduino.h"
 #include "Client.h"
 #include "WString.h"
