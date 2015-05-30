@@ -16,14 +16,14 @@
 #include "MQTTClient.h"
 #include "SIM908Client.h"
 
-char *server = "matheusfonseca.me";
-int port = 1883;
+//Host Name  : test.mosquitto.org
+char *server = "85.119.83.194";
+int port = 8080;
 
 char *apn = "zap.vivo.com.br";
 char *usr = "vivo";
 char *psw = "vivo";
 
-//client for server matheusfonseca.me
 SIM908Client client(0,1,5,4,3);
 
 MQTTClient mqttClient(server,port,client);
@@ -35,6 +35,7 @@ void setup()
   client.begin(9600);
   //attaches GPRS network and creates a web connection
   client.attach(apn,usr,psw);
+
   if (mqttClient.connect("7", "sisafa_test", "T5KIP1")) {
     mqttClient.subscribe("sisafa/sisafa_test/test");
   } else {

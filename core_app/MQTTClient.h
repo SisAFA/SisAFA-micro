@@ -1,18 +1,18 @@
 /*
  * MQTTClient.h
  *
- * Created on: Mai 25, 2015
+ * Created on: Mai 23, 2013
  * Author: 256dpi
- * 
+ *
  * Description:
- * This file specifyies the interface and methods needed for configuring 
+ * This file specifyies the interface and methods needed for configuring
  * a MQTT client, see MQTTClient.cpp for implementation
- * 
+ *
  * Limitations:
- * This library only supports QoS 0 (Quality of Service zero) 
- * This library needs a web client (i.e. EthernetClient, WifiClient) in 
+ * This library only supports QoS 0 (Quality of Service zero)
+ * This library needs a web client (i.e. EthernetClient, WifiClient) in
  * order to send and receive data from the web.
- * 
+ *
  */
 
 #ifndef MQTT_CLIENT_H
@@ -52,4 +52,3 @@ boolean connected();
 void disconnect();
 };
 #endif
-

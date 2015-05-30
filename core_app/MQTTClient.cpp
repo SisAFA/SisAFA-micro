@@ -1,13 +1,13 @@
 /*
  * MQTTClient.cpp
  *
- * Created on: Mai 25, 2015
+ * Created on: Mai 23, 2013
  * Author: 256dpi
- * 
+ *
  * Description:
  * This file contains the implementation of MQTTClient.h definitions
- * 
- * 
+ *
+ *
  */
 
 #include "MQTTClient.h"

@@ -2,7 +2,7 @@
  * SIM908Client.cpp
  *
  * Created on: Mai 25, 2015
- * Author: Arthur Jahn
+ * Author: Arthur Jahn & Vincent Wochnik
  * E-Mail: stutrzbecher@gmail.com
  *
  * Description:
@@ -10,6 +10,28 @@
  * definitions. It implements a GPRS web client based on AT
  * commands suppported by SIM908 SIMCOM chip, used for handling
  * GPS/GSM connections.
+ *
+ * The MIT License (MIT)
+ *
+ * Copyright (c) 2015 Vincent Wochnik  & Arthur Jahn
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+ * the Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+ * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
  */
 
 #include "SIM908Client.h"
@@ -115,30 +137,27 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
   //Close GPRS connection
   if (sendAndAssert(F("AT+CIPSHUT"), F("SHUT OK"), 1000, 3) != _S908_RECV_OK)
       return 0;
+  //Start up Single IP connection mode
+  if (sendAndAssert(F("AT+CIPMUX=0"), F("OK"), 1000, 3) != _S908_RECV_OK)
+      return 0;
   //TCP IP non Transparent mode
   if (sendAndAssert(F("AT+CIPMODE=0"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
-
   //Check network registration status
   if (sendAndAssert(F("AT+CREG=1"), F("OK"), 2000, 3, 5000) != _S908_RECV_OK)
       return 0;
-
-  if (sendAndAssert(F("AT+CREG?"), F("+CREG: 1,1"), 2000, 3, 5000) != _S908_RECV_OK)
-      _modem.println("CREG");
-
+  //Create GPRS PDP context
   if (sendAndAssert(F("AT+CGDCONT=1,\"IP\",\"zap.vivo.com.br\""), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
-
-  if (sendAndAssert(F("AT+CGPCO=0,”vivo”,”vivo”,1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
-      return 0;
-
+  //activate GPRS PDP context
   if (sendAndAssert(F("AT+CGACT=1,1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
-
+  //attach to the GPRS service
   if (sendAndAssert(F("AT+CGATT=1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
 
   tries = 3;
+  //Start task and set APN user name and password
   do {
       delay(5000);
       voidReadBuffer();
@@ -157,17 +176,11 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
       return 0;
 
   //Bring up the GPRS connection
-  if (sendAndAssert(F("AT+CIICR"), F("OK"), 2000, 3, 5000) != _S908_RECV_OK)
+  if (sendAndAssert(F("AT+CIICR"), F("OK"), 4000, 1, 20000) != _S908_RECV_OK)
       return 0;
-
-  if (sendAndAssert(F("AT+CIICR"), F("+PDP Deact"), 2000, 3, 5000) == _S908_RECV_OK)
-      _modem.println("+PDP Deact");
-
-
-
   delay(3000);
   //Verify if it has the local IP address
-  if (sendAndAssert(F("AT+CIFSR"), F("ERROR"), 2000, 3, 1000) == _S908_RECV_OK)
+  if (sendAndAssert(F("AT+CIFSR"), F("ERROR"), 2000, 1, 1000) == _S908_RECV_OK)
       return 0;
 
   _state = STATE_IDLE;
@@ -193,7 +206,7 @@ int SIM908Client::connect(IPAddress ip, uint16_t port)
         res = recvExpected(F("OK"), 1000);
         if (res != _S908_RECV_OK)
             continue;
-        res = recvExpected(F("CONNECT"), 60000);
+        res = recvExpected(F("CONNECT OK"), 60000);
         delay(500);
     } while ((res != _S908_RECV_OK) && (--tries > 0));
     if (res == _S908_RECV_OK) {
@@ -208,8 +221,10 @@ int SIM908Client::connect(const char *host, uint16_t port)
 {
     uint8_t res, tries;
 
-    if (_state != STATE_IDLE)
-        return 0;
+    if (_state != STATE_IDLE){
+      _modem.println(F("Not connected..."));
+      return 0;
+    }
 
     tries = 3;
     do {
