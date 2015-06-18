@@ -5,10 +5,10 @@
  * Author: Arthur Jahn
  * E-Mail: stutrzbecher@gmail.com
  *
- * Description: 
+ * Description:
  * This file contains the implementations of the GPS_SIM908, based
- * on arduino DFRobot libs (http://goo.gl/39ZXqm) 
- * by using AT commands suppported by SIM908 SIMCOM chip, 
+ * on arduino DFRobot libs (http://goo.gl/39ZXqm)
+ * by using AT commands suppported by SIM908 SIMCOM chip,
  * used for handling GPS data receiving and formatting.
  */
 
@@ -16,10 +16,10 @@
 #include<Arduino.h>
 
 double Datatransfer(char *data_buf,char num)//convert the data to the float type
-{                                           //*data_buf：the data array                                       
+{                                           //*data_buf：the data array
   double temp=0.0;                           //the number of the right of a decimal point
   unsigned char i,j;
- 
+
   if(data_buf[0]=='-')
   {
     i=1;
@@ -46,22 +46,22 @@ double Datatransfer(char *data_buf,char num)//convert the data to the float type
   }
   return temp;
 }
- 
+
 char ID()//Match the ID commands
-{ 
+{
   char i=0;
   char value[6]={
     '$','G','P','G','G','A'      };//match the gps protocol
   char val[6]={
     '0','0','0','0','0','0'      };
- 
+
   while(1)
   {
     if(Serial.available())
     {
       val[i] = Serial.read();//get the data from the serial interface
       if(val[i]==value[i]) //Match the protocol
-      {    
+      {
         i++;
         if(i==6)
         {
@@ -72,14 +72,14 @@ char ID()//Match the ID commands
       else
         i=0;
     }
-  } 
+  }
 }
- 
+
 void comma(char num)//get ','
-{   
+{
   char val;
   char count=0;//count the number of ','
- 
+
   while(1)
   {
     if(Serial.available())
@@ -91,16 +91,17 @@ void comma(char num)//get ','
     if(count==num)//if the command is right, run return
       return;
   }
- 
+
 }
-void UTC()//get the UTC data -- the time
+char* UTC()//get the UTC data -- the time
 {
   char i;
   char time[9]={
     '0','0','0','0','0','0','0','0','0'
   };
   double t=0.0;
- 
+  char buf[50];
+
   if( ID())//check ID
   {
     comma(1);//remove 1 ','
@@ -121,37 +122,28 @@ void UTC()//get the UTC data -- the time
         int h=time/10000;
         int m=(time/100)%100;
         int s=time%100;
-        
-//        if(h>=24)               //UTC+
-//        {
-//        h-=24;
-//        }
- 
-         if (h<0)               //UTC-
+
+        if(h>=24)               //UTC+
+        {
+          h-=24;
+        }
+        if (h<0)               //UTC-
         {
           h+=24;
         }
-        Serial.print(h);
-        Serial.print("h");
-        Serial.print(m);
-        Serial.print("m");
-        Serial.print(s);
-        Serial.println("s");
- 
-        //Serial.println(t);//Print data 
-        return;
-      }  
+        sprintf(buf,"%7.10lfh %7.10lfm %7.10lfs\n",h,m,s);
+        return buf;
+      }
     }
   }
 }
-void latitude()//get latitude
+double latitude()//get latitude
 {
   char i;
   char lat[10]={
     '0','0','0','0','0','0','0','0','0','0'
   };
- 
- 
+
   if( ID())
   {
     comma(2);
@@ -165,16 +157,15 @@ void latitude()//get latitude
       if(i==10)
       {
         i=0;
-        Serial.println(Datatransfer(lat,5)/100.0,7);//print latitude 
-        return;
-      }  
+        return Datatransfer(lat,5)/100.0;
+      }
     }
   }
 }
-void lat_dir()//get dimensions
+char lat_dir()//get dimensions
 {
   char i=0,val;
- 
+
   if( ID())
   {
     comma(3);
@@ -183,25 +174,18 @@ void lat_dir()//get dimensions
       if(Serial.available())
       {
         val = Serial.read();
-        Serial.write(val);
-        Serial.println();
-        i++;
+        return val;
       }
-      if(i==1)
-      {
-        i=0;
-        return;
-      }  
     }
   }
 }
-void longitude()//get longitude
+double longitude()//get longitude
 {
   char i;
   char lon[11]={
     '0','0','0','0','0','0','0','0','0','0','0'
   };
- 
+
   if( ID())
   {
     comma(4);
@@ -215,16 +199,15 @@ void longitude()//get longitude
       if(i==11)
       {
         i=0;
-        Serial.println(Datatransfer(lon,5)/100.0,7);
-        return;
-      }  
+        return Datatransfer(lon,5)/100.0;
+      }
     }
   }
 }
-void lon_dir()//get direction data
+char lon_dir()//get direction data
 {
   char i=0,val;
- 
+
   if( ID())
   {
     comma(5);
@@ -233,15 +216,8 @@ void lon_dir()//get direction data
       if(Serial.available())
       {
         val = Serial.read();
-        Serial.write(val); //Serial.println(val,BYTE);
-        Serial.println();
-        i++;
+        return val;
       }
-      if(i==1)
-      {
-        i=0;
-        return;
-      }  
     }
   }
 }
@@ -251,7 +227,7 @@ void altitude()//get altitude data
   char alt[8]={
     '0','0','0','0','0','0','0','0'
   };
- 
+
   if( ID())
   {
     comma(9);
@@ -268,9 +244,9 @@ void altitude()//get altitude data
       if(flag)
       {
         i=0;
-        Serial.println(Datatransfer(alt,1),1);//print altitude data
+        //Serial.println(Datatransfer(alt,1),1);//print altitude data
         return;
-      }  
+      }
     }
   }
 }

@@ -72,7 +72,7 @@ void loop()
       break;
     }
     case ALARM_BUZZ:{
-      handleAlarmBuzz();
+      handleAlarmBuzz(alarmTimer);
       break;
     }
     default:{
@@ -91,11 +91,12 @@ void messageReceived(String topic, String payload, char * bytes, unsigned int le
   Serial.print(payload);
   Serial.println();
 
+  // first char from payload converted from ASCII to int [0-9]
   int op = payload[0] - 48;
 
   switch(op){
     case ALARM_ON:{
-      activateAlarm();
+      activateAlarm(120000);
       break;
     }
     case ALARM_OFF:{
@@ -156,9 +157,31 @@ void handleAlarmOn(Timer gpsTimer)
 {
    if(gpsTimer.expired())
    {
-    //  reset default gps time
+    wakeupGps(client);
+    //  get GPS data
+    Timer dataTimer(300000);
+    double lat = 0;
+    char latDir = 'I';
+    double lon = 0;
+    char lonDir = 'I';
+    char *utc;
+
+    char msgBuf[300];
+    while(1)
+    {
+      utc = UTC();
+      lat = latitude();
+      latDir = lat_dir();
+      lon = longitude();
+      lonDir = lon_dir();
+      altitude();
+      if(dataTimer.expired())
+      {
+        break;
+      }
+    }
     //  build msg
-     gpsTimer(gpsLoopTime);
+     gpsTimer.countdown_ms(gpsLoopTime);
    }
 }
 
@@ -167,6 +190,20 @@ void handleAlarmBuzz(Timer alarmTimer)
   if(alarmTimer.expired())
   {
     //toogle buzz
-    alarmTimer(alarmLoopTime);
+    alarmTimer.countdown_ms(alarmLoopTime);
   }
+}
+
+int wakeupGps(SIM908Client client)
+{
+  Serial.println("AT");
+  delay(2000);
+  //turn on GPS power supply
+  Serial.println("AT+CGPSPWR=1");
+  delay(1000);
+  //reset GPS in autonomy mode
+  Serial.println("AT+CGPSRST=1");
+  delay(1000);
+  client.enableGps();
+  delay(2000);
 }
