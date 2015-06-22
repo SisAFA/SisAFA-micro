@@ -1,0 +1,27 @@
+Date: jun 21 2015 14:50
+Action: Testing TCP connection and MQTT protocol Mosquitto test server.
+Result: Success.
+Output:
+AT
+AT+IPR=9600
+AT&F
+AT&F
+AT+IFC=1,1
+AT+CPIN?
+AT+CIPSHUT
+AT+CIPMUX=0
+AT+CIPMODE=0
+AT+CREG=1
+AT+CGDCONT=1,"IP","zap.vivo.com.br"
+AT+CGACT=1,1
+AT+CGACT=1,1
+AT+CGACT=1,1
+AT+CGATT=1
+AT+CGATT=1
+AT+CSTT="zap.vivo.com.br","vivo","vivo"
+AT+CIICR
+AT+CIFSR
+AT+CIPSTART="TCP","85.119.83.194","1883"
+....MQIsdp.....arduinoClient+++AT+CIPCLOSE
+AT+CIPCLOSE
+AT+CIPCLOSE

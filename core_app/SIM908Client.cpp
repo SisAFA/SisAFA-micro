@@ -251,6 +251,7 @@ int SIM908Client::connect(const char *host, uint16_t port)
 
 size_t SIM908Client::write(uint8_t w)
 {
+    _modem.println(_state);
     if (_state != STATE_CONNECTED)
         return 0;
     return _modem.write(w);
@@ -258,9 +259,20 @@ size_t SIM908Client::write(uint8_t w)
 
 size_t SIM908Client::write(const uint8_t *buf, size_t size)
 {
-    if (_state != STATE_CONNECTED)
-        return 0;
-    return _modem.write(buf, size);
+    char size_buf[10];
+    itoa(size,size_buf,10);
+    _modem.print("AT+CIPSEND=");
+    _modem.println(size_buf);
+    _modem.flush();
+    int res;
+    res = recvExpected(F(">"), 10000);
+    if(res != _S908_RECV_OK && _state == STATE_CONNECTED) {
+      _modem.flush();
+      res =_modem.write(buf, size);
+      _modem.println((byte)0);
+      return res;
+    }
+    return 0;
 }
 
 void SIM908Client::flush()
@@ -283,10 +295,10 @@ void SIM908Client::stop()
             _buflen = 0;
         } while (fillBuffer());
         if (_state == STATE_CONNECTED) {
-            delay(1000);
-            _modem.print(F("+++"));
-            delay(500);
-            sendAndAssert(F("AT+CIPCLOSE"), F("OK"), 1000, 3);
+          delay(1000);
+          _modem.print(F("+++"));
+          delay(500);
+          sendAndAssert(F("AT+CIPCLOSE"), F("OK"), 1000, 3);
         }
     }
     _buflen = _bufindex = 0;
@@ -389,6 +401,7 @@ uint8_t SIM908Client::recvExpected(const __FlashStringHelper *exp, uint16_t time
             return _S908_RECV_TIMEOUT;
 
         r = _modem.read();
+
         switch (ret) {
         case _S908_RECV_RETURN:
             if (r == '\n')
