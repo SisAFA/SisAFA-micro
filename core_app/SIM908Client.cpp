@@ -141,7 +141,7 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
   if (sendAndAssert(F("AT+CIPMUX=0"), F("OK"), 1000, 3) != _S908_RECV_OK)
       return 0;
   //TCP IP non Transparent mode
-  if (sendAndAssert(F("AT+CIPMODE=0"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
+  if (sendAndAssert(F("AT+CIPMODE=1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
   //Check network registration status
   if (sendAndAssert(F("AT+CREG=1"), F("OK"), 2000, 3, 5000) != _S908_RECV_OK)
@@ -150,7 +150,7 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
   if (sendAndAssert(F("AT+CGDCONT=1,\"IP\",\"zap.vivo.com.br\""), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
   //activate GPRS PDP context
-  if (sendAndAssert(F("AT+CGACT=1,1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
+  if (sendAndAssert(F("AT+CGACT=1,1"), F("OK"), 5000, 3, 1000) != _S908_RECV_OK)
       return 0;
   //attach to the GPRS service
   if (sendAndAssert(F("AT+CGATT=1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
@@ -176,7 +176,7 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
       return 0;
 
   //Bring up the GPRS connection
-  if (sendAndAssert(F("AT+CIICR"), F("OK"), 4000, 1, 20000) != _S908_RECV_OK)
+  if (sendAndAssert(F("AT+CIICR"), F("OK"), 10000, 1, 5000) != _S908_RECV_OK)
       return 0;
   delay(3000);
   //Verify if it has the local IP address
@@ -206,7 +206,7 @@ int SIM908Client::connect(IPAddress ip, uint16_t port)
         res = recvExpected(F("OK"), 1000);
         if (res != _S908_RECV_OK)
             continue;
-        res = recvExpected(F("CONNECT OK"), 60000);
+        res = recvExpected(F("CONNECT"), 60000);
         delay(500);
     } while ((res != _S908_RECV_OK) && (--tries > 0));
     if (res == _S908_RECV_OK) {
@@ -238,7 +238,7 @@ int SIM908Client::connect(const char *host, uint16_t port)
         res = recvExpected(F("OK"), 1000);
         if (res != _S908_RECV_OK)
             continue;
-        res = recvExpected(F("CONNECT OK"), 60000);
+        res = recvExpected(F("CONNECT"), 60000);
         delay(500);
     } while ((res != _S908_RECV_OK) && (--tries > 0));
     if (res == _S908_RECV_OK) {
@@ -251,7 +251,6 @@ int SIM908Client::connect(const char *host, uint16_t port)
 
 size_t SIM908Client::write(uint8_t w)
 {
-    _modem.println(_state);
     if (_state != STATE_CONNECTED)
         return 0;
     return _modem.write(w);
@@ -259,27 +258,26 @@ size_t SIM908Client::write(uint8_t w)
 
 size_t SIM908Client::write(const uint8_t *buf, size_t size)
 {
-    char size_buf[10];
-    itoa(size,size_buf,10);
-    _modem.print("AT+CIPSEND=");
-    _modem.println(size_buf);
-    _modem.flush();
-    int res;
-    res = recvExpected(F(">"), 10000);
-    if(res != _S908_RECV_OK && _state == STATE_CONNECTED) {
-      _modem.flush();
-      res =_modem.write(buf, size);
-      _modem.println((byte)0);
-      return res;
-    }
-    return 0;
+    if (_state != STATE_CONNECTED)
+        return 0;
+    return _modem.write(buf,size);
+//    char size_buf[10];
+//    itoa(size,size_buf,10);
+//    _modem.flush();
+//    sendAndAssert(F("AT+CIPSEND"), F(">"), 3000, 3);
+//    if(_state == STATE_CONNECTED) {
+//      int res =_modem.write(buf+2, size-2);
+//      _modem.write((byte)0x1a);
+//      return res;
+//    }
+//    return 0;
 }
 
 void SIM908Client::flush()
 {
     if (_state != STATE_CONNECTED)
         return;
-    _modem.write(0x1a);
+    _modem.write((byte)0x1a);
     _modem.flush();
 }
 
@@ -397,9 +395,11 @@ uint8_t SIM908Client::recvExpected(const __FlashStringHelper *exp, uint16_t time
     while ((ret != _S908_RECV_OK) && (ret != _S908_RECV_INVALID)) {
         start = millis();
         while ((!_modem.available()) && (millis()-start < timeout));
-        if (!_modem.available())
+        if (!_modem.available()){
+            _modem.println(_S908_RECV_TIMEOUT);
+            _modem.flush();
             return _S908_RECV_TIMEOUT;
-
+        }
         r = _modem.read();
 
         switch (ret) {
@@ -424,15 +424,17 @@ uint8_t SIM908Client::recvExpected(const __FlashStringHelper *exp, uint16_t time
             }
             break;
         case _S908_RECV_READ:
-            if (r == '\n')
-                ret = _S908_RECV_OK;
+            while(_modem.available()) _modem.read();
+            ret = _S908_RECV_OK;
             break;
         case _S908_RECV_NO_MATCH:
-            if (r == '\n')
-                ret = _S908_RECV_INVALID;
+            while(_modem.available()) _modem.read();
+            ret = _S908_RECV_INVALID;
             break;
         }
     }
+    _modem.println(ret);
+    _modem.flush();
     return ret;
 }
 

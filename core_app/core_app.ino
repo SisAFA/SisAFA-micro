@@ -15,7 +15,7 @@
 #include "GPS_SIM908.h"
 #include <PubSubClient.h>
 #include "SIM908Client.h"
-//#include "Timer.h"
+#include "Timer.h"
 
 #define ALARM_OFF 0
 #define ALARM_ON 1
@@ -25,8 +25,8 @@ int gpsLoopTime = 900000; //15 minutes
 int alarmLoopTime = 60000; //1 minute
 
 //Host Name  : matheusfonseca.me
-//, "sisafa_test", "T5KIP1"
 byte server[] = { 107, 170, 177, 5 };
+int  port = 1883;
 
 //byte server[] = { 85, 119, 83, 194 };
 
@@ -39,7 +39,7 @@ int curState = ALARM_OFF;
 
 SIM908Client simClient(0,1,5,4,3);
 
-PubSubClient mqttClient(server, 1011, callback, simClient);
+PubSubClient mqttClient(server, port, callback, simClient);
 // Callback function
 void callback(char* topic, byte* payload, unsigned int length) {
   // In order to republish this payload, a copy must be made
@@ -90,26 +90,26 @@ void loop()
 {
   mqttClient.loop();
 
-//  Timer gpsTimer(gpsLoopTime);
-//  Timer alarmTimer(alarmLoopTime);
-//
-//  switch(curState){
-//    case ALARM_OFF:{
-//      handleAlarmOff();
-//      break;
-//    }
-//    case ALARM_ON:{
-//      handleAlarmOn(gpsTimer);
-//      break;
-//    }
-//    case ALARM_BUZZ:{
-//      handleAlarmBuzz(alarmTimer);
-//      break;
-//    }
-//    default:{
-//      break;
-//    }
-//  }
+ Timer gpsTimer(gpsLoopTime);
+ Timer alarmTimer(alarmLoopTime);
+
+ switch(curState){
+   case ALARM_OFF:{
+     handleAlarmOff();
+     break;
+   }
+   case ALARM_ON:{
+     handleAlarmOn(gpsTimer);
+     break;
+   }
+   case ALARM_BUZZ:{
+     handleAlarmBuzz(alarmTimer);
+     break;
+   }
+   default:{
+     break;
+   }
+ }
 
 }
 
@@ -184,46 +184,46 @@ void handleAlarmOff()
   // wait for turn on signal
 }
 
-//void handleAlarmOn(Timer gpsTimer)
-//{
-//   if(gpsTimer.expired())
-//   {
-//    wakeupGps(simClient);
-//    //  get GPS data
-//    Timer dataTimer(300000);
-//    double lat = 0;
-//    char latDir = 'I';
-//    double lon = 0;
-//    char lonDir = 'I';
-//    char *utc;
-//
-//    char msgBuf[300];
-//    while(1)
-//    {
-//      utc = UTC();
-//      lat = latitude();
-//      latDir = lat_dir();
-//      lon = longitude();
-//      lonDir = lon_dir();
-//      altitude();
-//      if(dataTimer.expired())
-//      {
-//        break;
-//      }
-//    }
-//    //  build msg
-//     gpsTimer.countdown_ms(gpsLoopTime);
-//   }
-//}
+void handleAlarmOn(Timer gpsTimer)
+{
+  if(gpsTimer.expired())
+  {
+   wakeupGps(simClient);
+   //  get GPS data
+   Timer dataTimer(300000);
+   double lat = 0;
+   char latDir = 'I';
+   double lon = 0;
+   char lonDir = 'I';
+   char *utc;
 
-//void handleAlarmBuzz(Timer alarmTimer)
-//{
-//  if(alarmTimer.expired())
-//  {
-//    //toogle buzz
-//    alarmTimer.countdown_ms(alarmLoopTime);
-//  }
-//}
+   char msgBuf[300];
+   while(1)
+   {
+     utc = UTC();
+     lat = latitude();
+     latDir = lat_dir();
+     lon = longitude();
+     lonDir = lon_dir();
+     altitude();
+     if(dataTimer.expired())
+     {
+       break;
+     }
+   }
+   //  build msg
+    gpsTimer.countdown_ms(gpsLoopTime);
+  }
+}
+
+void handleAlarmBuzz(Timer alarmTimer)
+{
+ if(alarmTimer.expired())
+ {
+   //toogle buzz
+   alarmTimer.countdown_ms(alarmLoopTime);
+ }
+}
 
 int wakeupGps(SIM908Client client)
 {
@@ -235,6 +235,4 @@ int wakeupGps(SIM908Client client)
   //reset GPS in autonomy mode
   Serial.println("AT+CGPSRST=1");
   delay(1000);
-  client.enableGps();
-  delay(2000);
 }
