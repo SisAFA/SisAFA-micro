@@ -29,8 +29,6 @@ int alarmLoopTime = 60000; //1 minute
 byte server[] = { 107, 170, 177, 5 };
 int  port = 1883;
 
-//byte server[] = { 85, 119, 83, 194 };
-
 char *apn = "zap.vivo.com.br";
 char *usr = "vivo";
 char *psw = "vivo";
@@ -48,9 +46,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   // constructing the PUBLISH packet.
 
   // Allocate the correct amount of memory for the payload copy
-  byte* p = (byte*)malloc(length);
+  //byte* p = (byte*)malloc(length);
   // Copy the payload to the new buffer
-  memcpy(p,payload,length);
+  //memcpy(p,payload,length);
   //mqttClient.publish("sisafa/sisafa_test/test", p, length);
 
   Serial.print("incomming: ");
@@ -60,7 +58,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   Serial.println();
 
   // Free the memory
-  free(p);
+  //free(p);
 }
 
   Timer gpsTimer(gpsLoopTime);
@@ -69,39 +67,30 @@ void callback(char* topic, byte* payload, unsigned int length) {
 void setup()
 {
   //start serial comunication at baud rate 9600
-  Serial.begin(9600);
-  
-  Serial.println("Connecting to network...");
+  //Serial.begin(9600);
+
+//  Serial.println("Connecting to network...");
   //start shield in gsm mode
   simClient.begin(9600);
-  
+
   //attaches GPRS network and creates a web connection
-  Serial.println("Attatching GPRS:");
-  char buf[10];
-  for(int i=1;i<=MAX_TRYIES; ++i){
-    sprintf(buf,"Try %d / %d...",i,MAX_TRYIES);
-    Serial.println(buf);
-    int res = simClient.attach(apn,usr,psw);
-    Serial.println(res);
-    if(res==1){
-      break;
-    }
-  }
-  
-  Serial.println("Connecting to server...");
+//  Serial.println("Attatching GPRS...");
+  int res = simClient.attach(apn,usr,psw);
+
+//  Serial.println("Connecting to server...");
   //setup used message protocol
   //TODO: generalize for different types of protocols. ex.:
   // MQTT, HTTP, SMS
   if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
-    if(!mqttClient.publish("sisafa/sisafa_test/test","Arduino test msg")){
-      Serial.println("message not sent...");
+    if(!mqttClient.subscribe("sisafa/sisafa_test/test")){
+//      Serial.println("message not sent...");
     }
     else{
-      Serial.println("message delivered.");
+//      Serial.println("message delivered.");
     }
   }
   else{
-    Serial.println("Connection not stabilished...");
+//    Serial.println("Connection not stabilished...");
   }
 }
 
@@ -109,8 +98,8 @@ void loop()
 {
  // mqttClient.loop();
 
-  curState = ALARM_ON;
- switch(curState){
+  curState = ALARM_OFF;
+  switch(curState){
    case ALARM_OFF:{
      handleAlarmOff();
      break;
@@ -225,17 +214,17 @@ void handleAlarmOn(Timer gpsTimer)
      altitude();
      if(dataTimer.expired())
      {
-       Serial.println("data timer expired");
+//       Serial.println("data timer expired");
        break;
      }
    }
     //  build msg
     sprintf(msgBuf,"lat:%lf\tldir:%c\nlon:%lf\tldir:%c\ntime:%s",lat,latDir,lon,lonDir,utc);
-    Serial.println(msgBuf);
+//    Serial.println(msgBuf);
     gpsTimer.countdown_ms(gpsLoopTime);
   }
   else{
-    Serial.println("not expired...");
+//    Serial.println("not expired...");
     delay(5000);
   }
 }
@@ -250,15 +239,17 @@ void handleAlarmBuzz(Timer alarmTimer)
 }
 
 int wakeupGps()
-{
-  Serial.println("AT");
-  delay(2000);
-  //turn on GPS power supply
-  Serial.println("AT+CGPSPWR=1");
-  delay(1000);
-  //reset GPS in autonomy mode
-  Serial.println("AT+CGPSRST=1");
-  delay(1000);
-  digitalWrite(4,LOW);//Enable GPS mode
-  digitalWrite(3,HIGH);//Disable GSM mode
+{ //delay(1000);
+//  Serial.print(F("+++"));
+//  delay(500);
+//  Serial.println("AT");
+//  delay(2000);
+//  //turn on GPS power supply
+//  Serial.println("AT+CGPSPWR=1");
+//  delay(1000);
+//  //reset GPS in autonomy mode
+//  Serial.println("AT+CGPSRST=1");
+//  delay(1000);
+//  digitalWrite(4,LOW);//Enable GPS mode
+//  digitalWrite(3,HIGH);//Disable GSM mode
 }

@@ -41,7 +41,7 @@
 #include "WString.h"
 #include <SoftwareSerial.h>
 
-#define _S908_READ_BUFFER_SIZE 48
+#define _S908_READ_BUFFER_SIZE 128
 
 #define _S908_RECV_OK 0
 #define _S908_RECV_TIMEOUT 1
