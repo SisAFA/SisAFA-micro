@@ -253,24 +253,20 @@ size_t SIM908Client::write(uint8_t w)
 {
     if (_state != STATE_CONNECTED)
         return 0;
-    return _modem.write(w);
+    int res = _modem.write(w);
+    _modem.write((byte)0x1a);
+    flush();
+    return res;
 }
 
 size_t SIM908Client::write(const uint8_t *buf, size_t size)
 {
     if (_state != STATE_CONNECTED)
         return 0;
-    return _modem.write(buf,size);
-//    char size_buf[10];
-//    itoa(size,size_buf,10);
-//    _modem.flush();
-//    sendAndAssert(F("AT+CIPSEND"), F(">"), 3000, 3);
-//    if(_state == STATE_CONNECTED) {
-//      int res =_modem.write(buf+2, size-2);
-//      _modem.write((byte)0x1a);
-//      return res;
-//    }
-//    return 0;
+    int res = _modem.write(buf+2,size-2);
+    _modem.write((byte)0x1a);
+    //flush();
+    return res;
 }
 
 void SIM908Client::flush()
@@ -481,7 +477,8 @@ size_t SIM908Client::fillBuffer()
         else
             _state = STATE_EOT;
     }
-
+    _modem.write(_buf,_buflen);
+    _modem.flush();
     return _buflen;
 }
 

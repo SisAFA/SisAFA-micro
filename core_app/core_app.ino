@@ -20,8 +20,9 @@
 #define ALARM_OFF 0
 #define ALARM_ON 1
 #define ALARM_BUZZ 2
+#define MAX_TRYIES 3
 
-int gpsLoopTime = 900000; //15 minutes
+int gpsLoopTime = 20000;//900000; //15 minutes
 int alarmLoopTime = 60000; //1 minute
 
 //Host Name  : matheusfonseca.me
@@ -62,23 +63,41 @@ void callback(char* topic, byte* payload, unsigned int length) {
   free(p);
 }
 
+  Timer gpsTimer(gpsLoopTime);
+  Timer alarmTimer(alarmLoopTime);
+
 void setup()
 {
   //start serial comunication at baud rate 9600
+  Serial.begin(9600);
+  
+  Serial.println("Connecting to network...");
   //start shield in gsm mode
   simClient.begin(9600);
+  
   //attaches GPRS network and creates a web connection
-  simClient.attach(apn,usr,psw);
-
+  Serial.println("Attatching GPRS:");
+  char buf[10];
+  for(int i=1;i<=MAX_TRYIES; ++i){
+    sprintf(buf,"Try %d / %d...",i,MAX_TRYIES);
+    Serial.println(buf);
+    int res = simClient.attach(apn,usr,psw);
+    Serial.println(res);
+    if(res==1){
+      break;
+    }
+  }
+  
+  Serial.println("Connecting to server...");
   //setup used message protocol
   //TODO: generalize for different types of protocols. ex.:
   // MQTT, HTTP, SMS
-  if (mqttClient.connect("10129", "sisafa_test", "T5KIP1")) {
-    if(!mqttClient.publish("sisafa/sisafa_test/test","lalalalala")){
+  if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
+    if(!mqttClient.publish("sisafa/sisafa_test/test","Arduino test msg")){
       Serial.println("message not sent...");
     }
     else{
-      Serial.println("message delivered");
+      Serial.println("message delivered.");
     }
   }
   else{
@@ -88,11 +107,9 @@ void setup()
 
 void loop()
 {
-  mqttClient.loop();
+ // mqttClient.loop();
 
- Timer gpsTimer(gpsLoopTime);
- Timer alarmTimer(alarmLoopTime);
-
+  curState = ALARM_ON;
  switch(curState){
    case ALARM_OFF:{
      handleAlarmOff();
@@ -188,7 +205,7 @@ void handleAlarmOn(Timer gpsTimer)
 {
   if(gpsTimer.expired())
   {
-   wakeupGps(simClient);
+   wakeupGps();
    //  get GPS data
    Timer dataTimer(300000);
    double lat = 0;
@@ -198,7 +215,7 @@ void handleAlarmOn(Timer gpsTimer)
    char *utc;
 
    char msgBuf[300];
-   while(1)
+   while(true)
    {
      utc = UTC();
      lat = latitude();
@@ -208,11 +225,18 @@ void handleAlarmOn(Timer gpsTimer)
      altitude();
      if(dataTimer.expired())
      {
+       Serial.println("data timer expired");
        break;
      }
    }
-   //  build msg
+    //  build msg
+    sprintf(msgBuf,"lat:%lf\tldir:%c\nlon:%lf\tldir:%c\ntime:%s",lat,latDir,lon,lonDir,utc);
+    Serial.println(msgBuf);
     gpsTimer.countdown_ms(gpsLoopTime);
+  }
+  else{
+    Serial.println("not expired...");
+    delay(5000);
   }
 }
 
@@ -225,7 +249,7 @@ void handleAlarmBuzz(Timer alarmTimer)
  }
 }
 
-int wakeupGps(SIM908Client client)
+int wakeupGps()
 {
   Serial.println("AT");
   delay(2000);
@@ -235,4 +259,6 @@ int wakeupGps(SIM908Client client)
   //reset GPS in autonomy mode
   Serial.println("AT+CGPSRST=1");
   delay(1000);
+  digitalWrite(4,LOW);//Enable GPS mode
+  digitalWrite(3,HIGH);//Disable GSM mode
 }

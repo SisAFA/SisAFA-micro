@@ -100,7 +100,7 @@ private:
     // circular buffer
     uint8_t _buf[_S908_READ_BUFFER_SIZE];
     // buffer index and length
-    size_t _bufindex, _buflen;
+    uint16_t _bufindex, _buflen;
 };
 
 #endif
