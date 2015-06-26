@@ -1,19 +1,23 @@
- /*
+/*
  * SIM908Client.cpp
  *
  * Created on: Mai 25, 2015
- * Author: Arthur Jahn & Vincent Wochnik
+ * Author: Arthur Jahn
  * E-Mail: stutrzbecher@gmail.com
  *
  * Description:
- * This file contains the implementation of the SIM908Client.h
- * definitions. It implements a GPRS web client based on AT
- * commands suppported by SIM908 SIMCOM chip, used for handling
- * GPS/GSM connections.
+ * This file contains the definitions of the SIM908Client, based
+ * on arduino Client.h interface, by using AT commands suppported
+ * by SIM908 SIMCOM chip, used for handling GPS/GSM connections.
+ *
+ * This library is based on Vincent Wochnik SIM900Client
+ * available at: https://github.com/vwochnik/sim900client
+ * E-Mail: v.wochnik@gmail.com
+ * Copyright (c) 2013 Vincent Wochnik
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2015 Vincent Wochnik  & Arthur Jahn
+ * Copyright (c) 2015 Arthur Jahn
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -206,9 +210,10 @@ int SIM908Client::connect(IPAddress ip, uint16_t port)
         res = recvExpected(F("OK"), 1000);
         if (res != _S908_RECV_OK)
             continue;
-        res = recvExpected(F("CONNECT"), 60000);
+        res = recvExpected(F("CONNECT"), 6000);
         delay(500);
     } while ((res != _S908_RECV_OK) && (--tries > 0));
+      delay(1000);
     if (res == _S908_RECV_OK) {
         _state = STATE_CONNECTED;
         return 1;
@@ -250,20 +255,14 @@ size_t SIM908Client::write(uint8_t w)
 {
     if (_state != STATE_CONNECTED)
         return 0;
-    int res = _modem.write(w);
-    _modem.write((byte)0x1a);
-    flush();
-    return res;
+    return _modem.write(w);
 }
 
 size_t SIM908Client::write(const uint8_t *buf, size_t size)
 {
     if (_state != STATE_CONNECTED)
         return 0;
-    int res = _modem.write(buf,size);
-    //    _modem.write((byte)0x1a);
-    //flush();
-    return res;
+    return _modem.write(buf,size);
 }
 
 void SIM908Client::flush()
@@ -285,12 +284,12 @@ void SIM908Client::stop()
         do {
             _buflen = 0;
         } while (fillBuffer());
-        if (_state == STATE_CONNECTED) {
+        //if (_state == STATE_CONNECTED) {
           delay(1000);
           _modem.print(F("+++"));
           delay(500);
           sendAndAssert(F("AT+CIPCLOSE"), F("OK"), 1000, 3);
-        }
+        //}
     }
     _buflen = _bufindex = 0;
     _flowctrl = 1;
@@ -416,12 +415,12 @@ uint8_t SIM908Client::recvExpected(const __FlashStringHelper *exp, uint16_t time
             }
             break;
         case _S908_RECV_READ:
-            while(_modem.available()) _modem.read();
-            ret = _S908_RECV_OK;
+            if (r == '\n')
+              ret = _S908_RECV_OK;
             break;
         case _S908_RECV_NO_MATCH:
-            while(_modem.available()) _modem.read();
-            ret = _S908_RECV_INVALID;
+            if (r == '\n')
+              ret = _S908_RECV_INVALID;
             break;
         }
     }
@@ -471,8 +470,7 @@ size_t SIM908Client::fillBuffer()
         else
             _state = STATE_EOT;
     }
-    _modem.write(_buf,_buflen);
-    _modem.flush();
+
     return _buflen;
 }
 

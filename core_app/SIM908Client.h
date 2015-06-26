@@ -2,13 +2,18 @@
  * SIM908Client.h
  *
  * Created on: Mai 25, 2015
- * Author: Arthur Jahn & Vincent Wochnik
+ * Author: Arthur Jahn
  * E-Mail: stutrzbecher@gmail.com
  *
  * Description:
  * This file contains the definitions of the SIM908Client, based
  * on arduino Client.h interface, by using AT commands suppported
  * by SIM908 SIMCOM chip, used for handling GPS/GSM connections.
+ *
+ * This library is based on Vincent Wochnik SIM900Client
+ * available at: https://github.com/vwochnik/sim900client
+ * E-Mail: v.wochnik@gmail.com
+ * Copyright (c) 2013 Vincent Wochnik
  *
  * The MIT License (MIT)
  *

@@ -82,7 +82,7 @@ void setup()
   //TODO: generalize for different types of protocols. ex.:
   // MQTT, HTTP, SMS
   if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
-    if(!mqttClient.subscribe("sisafa/sisafa_test/test")){
+    if(!mqttClient.publish("sisafa/sisafa_test/test","ARDUINO ON!")){
 //      Serial.println("message not sent...");
     }
     else{
