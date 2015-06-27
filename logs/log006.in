@@ -1,0 +1,22 @@
+Date: jun 23 2015 16:12
+Action: Testing TCP connection with matheusfonseca.me server (strong signal)
+Result: Connection success
+Output:
+AT
+AT+IPR=9600
+AT&F
+AT+IFC=1,1
+AT+CPIN?
+AT+CIPSHUT
+AT+CIPMUX=0
+AT+CIPMODE=1
+AT+CREG=1
+AT+CGDCONT=1,"IP","zap.vivo.com.br"
+AT+CGACT=1,1
+AT+CGACT=1,1
+AT+CGATT=1
+AT+CSTT="zap.vivo.com.br","vivo","vivo"
+AT+CIICR
+AT+CIFSR
+AT+CIPSTART="TCP","107.170.177.5","1883"
+34041 ms
