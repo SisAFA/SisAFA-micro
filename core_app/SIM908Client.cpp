@@ -85,14 +85,13 @@ void SIM908Client::begin(int speed)
     if (_state < STATE_ACTIVE)
         return;
 
-    // baud rate setting
     tries = 3;
     do {
-      //Set baud rate of the SoftwareSerial
-      _modem.print(F("AT+IPR="));
-      _modem.println(speed);
-      _modem.flush();
-      res = recvExpected(F("OK"), 1000);
+        //Set baud rate of the SoftwareSerial
+        _modem.print(F("AT+IPR="));
+        _modem.println(speed);
+        _modem.flush();
+        res = recvExpected(F("OK"), 1000);
     } while ((res != _S908_RECV_OK) && (--tries > 0));
 
     if (res != _S908_RECV_OK)
@@ -119,7 +118,7 @@ uint8_t SIM908Client::pin(const char *pin)
     tries = 3;
     do {
         voidReadBuffer();
-
+        //Insert pin number
         _modem.print(F("AT+CPIN="));
         _modem.println(pin);
         _modem.flush();
@@ -143,10 +142,10 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
   //Close GPRS connection
   if (sendAndAssert(F("AT+CIPSHUT"), F("SHUT OK"), 1000, 3) != _S908_RECV_OK)
       return 0;
-  //Start up Single IP connection mode
+  //Start Single IP connection mode
   if (sendAndAssert(F("AT+CIPMUX=0"), F("OK"), 1000, 3) != _S908_RECV_OK)
       return 0;
-  //TCP IP non Transparent mode
+  //TCP IP Transparent mode
   if (sendAndAssert(F("AT+CIPMODE=1"), F("OK"), 1000, 3, 5000) != _S908_RECV_OK)
       return 0;
   //Check network registration status
@@ -163,7 +162,7 @@ uint8_t SIM908Client::attach(const char *apn, const char *user, const char *pass
       return 0;
 
   tries = 3;
-  //Start task and set APN user name and password
+  //Start task and set APN, user name and password
   do {
       delay(5000);
       voidReadBuffer();
@@ -203,6 +202,7 @@ int SIM908Client::connect(IPAddress ip, uint16_t port)
     tries = 1  ;
     do {
         voidReadBuffer();
+        // start a TCP connection with passed server and port
         _modem.print(F("AT+CIPSTART=\"TCP\",\""));
         _modem.print(ip);
         _modem.print(F("\",\""));
@@ -215,7 +215,7 @@ int SIM908Client::connect(IPAddress ip, uint16_t port)
         res = recvExpected(F("CONNECT"), 6000);
         delay(500);
     } while ((res != _S908_RECV_OK) && (--tries > 0));
-      delay(1000);
+    delay(1000);
     if (res == _S908_RECV_OK) {
         _state = STATE_CONNECTED;
         return 1;
@@ -234,6 +234,7 @@ int SIM908Client::connect(const char *host, uint16_t port)
     tries = 3;
     do {
         voidReadBuffer();
+        // start a TCP connection with passed server and port
         _modem.print(F("AT+CIPSTART=\"TCP\",\""));
         _modem.print(host);
         _modem.print(F("\",\""));
@@ -286,12 +287,12 @@ void SIM908Client::stop()
         do {
             _buflen = 0;
         } while (fillBuffer());
-        //if (_state == STATE_CONNECTED) {
-          delay(1000);
-          _modem.print(F("+++"));
-          delay(500);
-          sendAndAssert(F("AT+CIPCLOSE"), F("OK"), 1000, 3);
-        //}
+        if (_state == STATE_CONNECTED) {
+            delay(1000);
+            _modem.print(F("+++"));
+            delay(500);
+            sendAndAssert(F("AT+CIPCLOSE"), F("OK"), 1000, 3);
+        }
     }
     _buflen = _bufindex = 0;
     _flowctrl = 1;
@@ -299,13 +300,13 @@ void SIM908Client::stop()
 }
 
 void SIM908Client::enableGps(){
-  digitalWrite(_gpsPin,LOW);//Enable GPS mode
-  digitalWrite(_gsmPin,HIGH);//Disable GSM mode
+    digitalWrite(_gpsPin,LOW);//Enable GPS mode
+    digitalWrite(_gsmPin,HIGH);//Disable GSM mode
 }
 
 void SIM908Client::enableGsm(){
-  digitalWrite(_gsmPin,LOW);//Enable GSM mode
-  digitalWrite(_gpsPin,HIGH);//Disable GPS mode
+    digitalWrite(_gsmPin,LOW);//Enable GSM mode
+    digitalWrite(_gpsPin,HIGH);//Disable GPS mode
 }
 
 int SIM908Client::available()
@@ -368,14 +369,13 @@ void SIM908Client::voidReadBuffer()
 
 int8_t SIM908Client::startGPS(){
     unsigned long previous = millis();
-    
-      // starts the GPS
-      sendAndAssert(F("AT+CGPSPWR=1"), F("OK"), 2000, 1, 1000);
-      sendAndAssert(F("AT+CGPSRST=0"), F("OK"), 2000, 1, 1000);
-      delay(5000);
+    // starts the GPS
+    sendAndAssert(F("AT+CGPSPWR=1"), F("OK"), 2000, 1, 1000);
+    sendAndAssert(F("AT+CGPSRST=0"), F("OK"), 2000, 1, 1000);
+    delay(5000);
 
-    // waits for fix GPS
-    while( sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 2D Fix"), 5000, 30, 1000) &&  
+    // waits for fixed GPS position
+    while( sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 2D Fix"), 5000, 30, 1000) &&
         sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 3D Fix"), 5000, 30, 1000)&&
         ((millis() - previous) < 120000));
 
@@ -387,7 +387,7 @@ int8_t SIM908Client::startGPS(){
     }
     else
     {
-        return 0;    
+        return 0;
     }
 }
 
@@ -395,22 +395,14 @@ int8_t SIM908Client::getGPS(){
 
     int8_t counter, answer;
     long previous;
-    
     char frame[200];
-
     char latitude[15];
     char longitude[15];
-    char altitude[6];
     char date[16];
     char time[7];
-    char satellites[3];
-    char speedOTG[10];
-    char course[10];
-
-
     // First get the NMEA string
     // Clean the input buffer
-    while( _modem.available() > 0) _modem.read(); 
+    while( _modem.available() > 0) _modem.read();
     // request Basic string
     sendAndAssert(F("AT+CGPSINF=0"), F("AT+CGPSINF=0\r\n\r\n"), 2000, 1, 1000);
     counter = 0;
@@ -419,57 +411,44 @@ int8_t SIM908Client::getGPS(){
     previous = millis();
     // this loop waits for the NMEA string
     do{
-
-        if(_modem.available() != 0){    
+        if(_modem.available() != 0){
             frame[counter] = _modem.read();
             counter++;
             // check if the desired answer is in the response of the module
-            if (strstr(frame, "OK") != NULL)    
+            if (strstr(frame, "OK") != NULL)
             {
                 answer = 1;
             }
         }
-        // Waits for the asnwer with time out
-    }
-    while((answer == 0) && ((millis() - previous) < 2000));  
-  
-    _modem.println(frame);
-    _modem.println(millis() - start);
+      // Waits for the asnwer with time out
+    } while((answer == 0) && ((millis() - previous) < 2000));
 
-    frame[counter-3] = '\0'; 
-    
-    // Parses the string 
+    frame[counter-3] = '\0';
+    // Parses the string
     strtok(frame, ",");
     strcpy(longitude,strtok(NULL, ",")); // Gets longitude
     strcpy(latitude,strtok(NULL, ",")); // Gets latitude
-    strcpy(altitude,strtok(NULL, ".")); // Gets altitude 
-    strtok(NULL, ",");    
-    strcpy(date,strtok(NULL, ".")); // Gets date
     strtok(NULL, ",");
-    strtok(NULL, ",");  
-    strcpy(satellites,strtok(NULL, ",")); // Gets satellites
-    strcpy(speedOTG,strtok(NULL, ",")); // Gets speed over ground. Unit is knots.
-    strcpy(course,strtok(NULL, "\r")); // Gets course
+    strcpy(date,strtok(NULL, ".")); // Gets date
 
     convert2Degrees(latitude);
     convert2Degrees(longitude);
-    
+
     return answer;
 }
 
-/* convert2Degrees ( input ) - performs the conversion from input 
- * parameters in  DD°MM.mmm’ notation to DD.dddddd° notation. 
- * 
+/* convert2Degrees ( input ) - performs the conversion from input
+ * parameters in  DD°MM.mmm’ notation to DD.dddddd° notation.
+ *
  * Sign '+' is set for positive latitudes/longitudes (North, East)
  * Sign '-' is set for negative latitudes/longitudes (South, West)
- *  
+ *
  */
 int8_t SIM908Client::convert2Degrees(char* input){
 
     float deg;
     float minutes;
-    boolean neg = false;    
-
+    boolean neg = false;
     //auxiliar variable
     char aux[10];
 
@@ -477,16 +456,13 @@ int8_t SIM908Client::convert2Degrees(char* input){
     {
         neg = true;
         strcpy(aux, strtok(input+1, "."));
-
     }
     else
     {
         strcpy(aux, strtok(input, "."));
     }
-
     // convert string to integer and add it to final float variable
     deg = atof(aux);
-
     strcpy(aux, strtok(NULL, '\0'));
     minutes=atof(aux);
     minutes/=1000000;
@@ -498,67 +474,58 @@ int8_t SIM908Client::convert2Degrees(char* input){
     else
     {
         minutes += int(deg) % 100;
-        deg = int(deg) / 100;    
+        deg = int(deg) / 100;
     }
-
-    // add minutes to degrees 
+    // add minutes to degrees
     deg=deg+minutes/60;
-
-
     if (neg == true)
     {
         deg*=-1.0;
     }
-
     neg = false;
-
     if( deg < 0 ){
         neg = true;
         deg*=-1;
     }
-    
-    float numeroFloat=deg; 
-    int parteEntera[10];
-    int cifra; 
-    long numero=(long)numeroFloat;  
+
+    float numFloat=deg;
+    int intPart[10];
+    int decimal;
+    long num=(long)numFloat;
     int size=0;
-    
+
     while(1){
         size=size+1;
-        cifra=numero%10;
-        numero=numero/10;
-        parteEntera[size-1]=cifra; 
-        if (numero==0){
+        decimal=num%10;
+        num=num/10;
+        intPart[size-1]=decimal;
+        if (num==0){
             break;
         }
     }
-   
-    int indice=0;
-    if( neg ){
-        indice++;
+
+    int index=0;
+    if(neg){
+        index++;
         input[0]='-';
     }
     for (int i=size-1; i >= 0; i--)
     {
-        input[indice]=parteEntera[i]+'0'; 
-        indice++;
+        input[index]=intPart[i]+'0';
+        index++;
     }
-
-    input[indice]='.';
-    indice++;
-
-    numeroFloat=(numeroFloat-(int)numeroFloat);
+    input[index]='.';
+    index++;
+    numFloat=(numFloat-(int)numFloat);
     for (int i=1; i<=6 ; i++)
     {
-        numeroFloat=numeroFloat*10;
-        cifra= (long)numeroFloat;          
-        numeroFloat=numeroFloat-cifra;
-        input[indice]=char(cifra)+48;
-        indice++;
+        numFloat=numFloat*10;
+        decimal= (long)numFloat;
+        numFloat=numFloat-decimal;
+        input[index]=char(decimal)+48;
+        index++;
     }
-    input[indice]='\0';
-
-
+    input[index]='\0';
 }
 
 uint8_t SIM908Client::sendAndAssert(const __FlashStringHelper* cmd, const __FlashStringHelper* exp, uint16_t timeout, uint8_t tries, uint16_t failDelay)
@@ -613,11 +580,11 @@ uint8_t SIM908Client::recvExpected(const __FlashStringHelper *exp, uint16_t time
             break;
         case _S908_RECV_READ:
             if (r == '\n')
-              ret = _S908_RECV_OK;
+                ret = _S908_RECV_OK;
             break;
         case _S908_RECV_NO_MATCH:
             if (r == '\n')
-              ret = _S908_RECV_INVALID;
+                ret = _S908_RECV_INVALID;
             break;
         }
     }
@@ -701,5 +668,3 @@ uint8_t SIM908Client::detectClosed()
     }
     return 0;
 }
-
-
