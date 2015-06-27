@@ -33,102 +33,58 @@ char *usr = "vivo";
 char *psw = "vivo";
 
 /* Current State */
-int curState = ALARM_ON;
+int curState = ALARM_OFF;
 
 SIM908Client simClient(0,1,5,4,3);
 
-PubSubClient mqttClient(server, port, callback, simClient);
-// Callback function
-void callback(char* topic, byte* payload, unsigned int length) {
-  // In order to republish this payload, a copy must be made
-  // as the orignal payload buffer will be overwritten whilst
-  // constructing the PUBLISH packet.
+PubSubClient mqttClient(server, port, msg_callback, simClient);
 
-  // Allocate the correct amount of memory for the payload copy
-  //byte* p = (byte*)malloc(length);
-  // Copy the payload to the new buffer
-  //memcpy(p,payload,length);
-  //mqttClient.publish("sisafa/sisafa_test/test", p, length);
-
-  Serial.print("incomming: ");
-  Serial.print(topic);
-  Serial.print(" - ");
-  Serial.print((char *)payload);
-  Serial.println();
-
-  // Free the memory
-  //free(p);
-}
-
-  Timer gpsTimer(gpsLoopTime);
-  Timer alarmTimer(alarmLoopTime);
+Timer gpsTimer(gpsLoopTime);
+Timer alarmTimer(alarmLoopTime);
 
 void setup()
 {
-  //start serial comunication at baud rate 9600
-  //Serial.begin(9600);
-
-//  Serial.println("Connecting to network...");
-  //start shield in gsm mode
+  //starting client with baud rate 9600
   simClient.begin(9600);
-
+  //starting GPS module 
   simClient.startGPS();
-
-  //attaches GPRS network and creates a web connection
-//  Serial.println("Attatching GPRS...");
-//  int res = simClient.attach(apn,usr,psw);
-
-//  Serial.println("Connecting to server...");
+  //attaching GPRS network and creating a web connection
+  int res = simClient.attach(apn,usr,psw);
   //setup used message protocol
-  //TODO: generalize for different types of protocols. ex.:
-  // MQTT, HTTP, SMS
   if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
-    if(!mqttClient.publish("sisafa/sisafa_test/test","ARDUINO ON!")){
-//      Serial.println("message not sent...");
-    }
-    else{
-//      Serial.println("message delivered.");
-    }
+    //when connected, must subscribe topic power_op 
   }
   else{
-//    Serial.println("Connection not stabilished...");
+    //restart shield
   }
 }
 
 void loop()
 {
- // mqttClient.loop();
-
-//  curState = ALARM_OFF;
+  mqttClient.loop();
+  
   switch(curState){
-   case ALARM_OFF:{
-     handleAlarmOff();
-     break;
-   }
-   case ALARM_ON:{
-     handleAlarmOn(gpsTimer);
-     break;
-   }
-   case ALARM_BUZZ:{
-     handleAlarmBuzz(alarmTimer);
-     break;
-   }
-   default:{
-     break;
-   }
- }
-
+    case ALARM_OFF:{
+      handleAlarmOff();
+      break;
+    }
+    case ALARM_ON:{
+      handleAlarmOn(gpsTimer);
+      break;
+    }
+    case ALARM_BUZZ:{
+      handleAlarmBuzz(alarmTimer);
+      break;
+    }
+    default:{
+      break;
+    }
+  }
 }
 
-//method for handling messages recieved from the web mosquitto
-void msg(String topic, String payload, char * bytes, unsigned int length)
+//function for handling messages recieved from the server
+void msg_callback(char* topic, byte* payload, unsigned int length)
 {
-  Serial.print("incomming: ");
-  Serial.print(topic);
-  Serial.print(" - ");
-  Serial.print(payload);
-  Serial.println();
-
   // first char from payload converted from ASCII to int [0-9]
   int op = payload[0] - 48;
 
