@@ -1,6 +1,6 @@
 Date: jun 21 2015 14:54
-Action: Testing TCP connection and MQTT protocol authentication with matheusfonseca.me
-Result:Success
+Action: Testing MQTT publish with matheusfonseca.me server
+Result: Publish  Success
 Output:
 AT
 AT+IPR=9600
@@ -19,5 +19,5 @@ AT+CSTT="zap.vivo.com.br","vivo","vivo"
 AT+CIICR
 AT+CIFSR
 AT+CIPSTART="TCP","107.170.177.5","1883"
-.+..MQIsdp.Â.<..10k2D129..sisafa_test..T5KIP1 ... ... ... .. .. . .
-....00..sisafa/sisafa_test/testARDUINO ON
+.+..MQIsdp.Â.<..10k2D129..sisafa_test..T5KIP1
+..00..sisafa/sisafa_test/testARDUINO ON!

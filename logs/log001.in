@@ -1,6 +1,6 @@
 Date: jun 21 2015 14:50
 Action: Testing TCP connection and MQTT protocol Mosquitto test server.
-Result: Success.
+Result: TCP Success, Mosquitto fail.
 Output:
 AT
 AT+IPR=9600
