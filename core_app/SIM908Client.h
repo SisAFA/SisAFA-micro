@@ -60,6 +60,8 @@
 class SIM908Client : public Client
 {
 public:
+    
+
     SIM908Client(uint8_t, uint8_t, uint8_t, uint8_t, uint8_t);
     void begin(int);
     uint8_t pin(const char*);
@@ -76,14 +78,19 @@ public:
     virtual uint8_t connected();
     virtual void flush();
     virtual void stop();
-
-    virtual void enableGps();
     virtual void enableGsm();
 
+    virtual void enableGps();
+    virtual int8_t startGPS();
+    virtual int8_t getGPS();
+    virtual int8_t convert2Degrees(char* input);
+    
     virtual operator bool();
 
 protected:
     void voidReadBuffer();
+    //sendAndAssert sends a AT command (first param), waits a response (second param), time to wait a response (third param)
+    //  sets a number of tries (fourth param) and a time to wait before another try (fifth param)
     uint8_t sendAndAssert(const __FlashStringHelper*, const __FlashStringHelper*, uint16_t, uint8_t,uint16_t=0);
     uint8_t recvExpected(const __FlashStringHelper*, uint16_t);
     size_t fillBuffer();

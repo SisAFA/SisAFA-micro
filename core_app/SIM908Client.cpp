@@ -49,6 +49,8 @@
 #define STATE_CLOSED 5
 #define STATE_EOT 6
 
+int start = 0;
+
 SIM908Client::SIM908Client(uint8_t receivePin, uint8_t transmitPin, uint8_t powerPin, uint8_t gpsPin, uint8_t gsmPin) : _modem(receivePin, transmitPin), _pwrPin(powerPin), _gpsPin(gpsPin), _gsmPin(gsmPin), _state(STATE_INACTIVE)
 {
     // set power pin to output to be able to set LOW and HIGH
@@ -364,6 +366,201 @@ void SIM908Client::voidReadBuffer()
         _modem.read();
 }
 
+int8_t SIM908Client::startGPS(){
+    unsigned long previous = millis();
+    
+      // starts the GPS
+      sendAndAssert(F("AT+CGPSPWR=1"), F("OK"), 2000, 1, 1000);
+      sendAndAssert(F("AT+CGPSRST=0"), F("OK"), 2000, 1, 1000);
+      delay(5000);
+
+    // waits for fix GPS
+    while( sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 2D Fix"), 5000, 30, 1000) &&  
+        sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 3D Fix"), 5000, 30, 1000)&&
+        ((millis() - previous) < 120000));
+
+    start = millis();
+
+    if ((millis() - previous) < 120000)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;    
+    }
+}
+
+int8_t SIM908Client::getGPS(){
+
+    int8_t counter, answer;
+    long previous;
+    
+    char frame[200];
+
+    char latitude[15];
+    char longitude[15];
+    char altitude[6];
+    char date[16];
+    char time[7];
+    char satellites[3];
+    char speedOTG[10];
+    char course[10];
+
+
+    // First get the NMEA string
+    // Clean the input buffer
+    while( _modem.available() > 0) _modem.read(); 
+    // request Basic string
+    sendAndAssert(F("AT+CGPSINF=0"), F("AT+CGPSINF=0\r\n\r\n"), 2000, 1, 1000);
+    counter = 0;
+    answer = 0;
+    memset(frame, '\0', 100);    // Initialize the string
+    previous = millis();
+    // this loop waits for the NMEA string
+    do{
+
+        if(_modem.available() != 0){    
+            frame[counter] = _modem.read();
+            counter++;
+            // check if the desired answer is in the response of the module
+            if (strstr(frame, "OK") != NULL)    
+            {
+                answer = 1;
+            }
+        }
+        // Waits for the asnwer with time out
+    }
+    while((answer == 0) && ((millis() - previous) < 2000));  
+  
+    _modem.println(frame);
+    _modem.println(millis() - start);
+
+    frame[counter-3] = '\0'; 
+    
+    // Parses the string 
+    strtok(frame, ",");
+    strcpy(longitude,strtok(NULL, ",")); // Gets longitude
+    strcpy(latitude,strtok(NULL, ",")); // Gets latitude
+    strcpy(altitude,strtok(NULL, ".")); // Gets altitude 
+    strtok(NULL, ",");    
+    strcpy(date,strtok(NULL, ".")); // Gets date
+    strtok(NULL, ",");
+    strtok(NULL, ",");  
+    strcpy(satellites,strtok(NULL, ",")); // Gets satellites
+    strcpy(speedOTG,strtok(NULL, ",")); // Gets speed over ground. Unit is knots.
+    strcpy(course,strtok(NULL, "\r")); // Gets course
+
+    convert2Degrees(latitude);
+    convert2Degrees(longitude);
+    
+    return answer;
+}
+
+/* convert2Degrees ( input ) - performs the conversion from input 
+ * parameters in  DD°MM.mmm’ notation to DD.dddddd° notation. 
+ * 
+ * Sign '+' is set for positive latitudes/longitudes (North, East)
+ * Sign '-' is set for negative latitudes/longitudes (South, West)
+ *  
+ */
+int8_t SIM908Client::convert2Degrees(char* input){
+
+    float deg;
+    float minutes;
+    boolean neg = false;    
+
+    //auxiliar variable
+    char aux[10];
+
+    if (input[0] == '-')
+    {
+        neg = true;
+        strcpy(aux, strtok(input+1, "."));
+
+    }
+    else
+    {
+        strcpy(aux, strtok(input, "."));
+    }
+
+    // convert string to integer and add it to final float variable
+    deg = atof(aux);
+
+    strcpy(aux, strtok(NULL, '\0'));
+    minutes=atof(aux);
+    minutes/=1000000;
+    if (deg < 100)
+    {
+        minutes += deg;
+        deg = 0;
+    }
+    else
+    {
+        minutes += int(deg) % 100;
+        deg = int(deg) / 100;    
+    }
+
+    // add minutes to degrees 
+    deg=deg+minutes/60;
+
+
+    if (neg == true)
+    {
+        deg*=-1.0;
+    }
+
+    neg = false;
+
+    if( deg < 0 ){
+        neg = true;
+        deg*=-1;
+    }
+    
+    float numeroFloat=deg; 
+    int parteEntera[10];
+    int cifra; 
+    long numero=(long)numeroFloat;  
+    int size=0;
+    
+    while(1){
+        size=size+1;
+        cifra=numero%10;
+        numero=numero/10;
+        parteEntera[size-1]=cifra; 
+        if (numero==0){
+            break;
+        }
+    }
+   
+    int indice=0;
+    if( neg ){
+        indice++;
+        input[0]='-';
+    }
+    for (int i=size-1; i >= 0; i--)
+    {
+        input[indice]=parteEntera[i]+'0'; 
+        indice++;
+    }
+
+    input[indice]='.';
+    indice++;
+
+    numeroFloat=(numeroFloat-(int)numeroFloat);
+    for (int i=1; i<=6 ; i++)
+    {
+        numeroFloat=numeroFloat*10;
+        cifra= (long)numeroFloat;          
+        numeroFloat=numeroFloat-cifra;
+        input[indice]=char(cifra)+48;
+        indice++;
+    }
+    input[indice]='\0';
+
+
+}
+
 uint8_t SIM908Client::sendAndAssert(const __FlashStringHelper* cmd, const __FlashStringHelper* exp, uint16_t timeout, uint8_t tries, uint16_t failDelay)
 {
     uint8_t res;
@@ -504,3 +701,5 @@ uint8_t SIM908Client::detectClosed()
     }
     return 0;
 }
+
+

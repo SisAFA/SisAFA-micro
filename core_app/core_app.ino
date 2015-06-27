@@ -12,7 +12,6 @@
 */
 
 #include <SoftwareSerial.h>
-#include "GPS_SIM908.h"
 #include <PubSubClient.h>
 #include "SIM908Client.h"
 #include "Timer.h"
@@ -34,7 +33,7 @@ char *usr = "vivo";
 char *psw = "vivo";
 
 /* Current State */
-int curState = ALARM_OFF;
+int curState = ALARM_ON;
 
 SIM908Client simClient(0,1,5,4,3);
 
@@ -73,9 +72,11 @@ void setup()
   //start shield in gsm mode
   simClient.begin(9600);
 
+  simClient.startGPS();
+
   //attaches GPRS network and creates a web connection
 //  Serial.println("Attatching GPRS...");
-  int res = simClient.attach(apn,usr,psw);
+//  int res = simClient.attach(apn,usr,psw);
 
 //  Serial.println("Connecting to server...");
   //setup used message protocol
@@ -98,7 +99,7 @@ void loop()
 {
  // mqttClient.loop();
 
-  curState = ALARM_OFF;
+//  curState = ALARM_OFF;
   switch(curState){
    case ALARM_OFF:{
      handleAlarmOff();
@@ -194,7 +195,7 @@ void handleAlarmOn(Timer gpsTimer)
 {
   if(gpsTimer.expired())
   {
-   wakeupGps();
+//   wakeupGps();
    //  get GPS data
    Timer dataTimer(300000);
    double lat = 0;
@@ -206,12 +207,14 @@ void handleAlarmOn(Timer gpsTimer)
    char msgBuf[300];
    while(true)
    {
-     utc = UTC();
-     lat = latitude();
-     latDir = lat_dir();
-     lon = longitude();
-     lonDir = lon_dir();
-     altitude();
+//     utc = UTC();
+//     lat = latitude();
+//     latDir = lat_dir();
+//     lon = longitude();
+//     lonDir = lon_dir();
+//     altitude();
+      simClient.getGPS();
+
      if(dataTimer.expired())
      {
 //       Serial.println("data timer expired");
