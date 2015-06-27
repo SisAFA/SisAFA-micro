@@ -35,6 +35,8 @@ char *psw = "vivo";
 /* Current State */
 int curState = ALARM_OFF;
 
+char *pwrOpTopic = "sisafa/sisafa_test/test";
+
 SIM908Client simClient(0,1,5,4,3);
 
 PubSubClient mqttClient(server, port, msg_callback, simClient);
@@ -53,6 +55,7 @@ void setup()
   //setup used message protocol
   if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
     //when connected, must subscribe topic power_op 
+    mqttClient.subscribe(pwrOpTopic);
   }
   else{
     //restart shield
