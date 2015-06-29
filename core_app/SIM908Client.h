@@ -82,7 +82,7 @@ public:
 
     virtual void enableGps();
     virtual int8_t startGPS();
-    virtual int8_t getGPS();
+    virtual char* getGPS();
     virtual int8_t convert2Degrees(char* input);
     
     virtual operator bool();

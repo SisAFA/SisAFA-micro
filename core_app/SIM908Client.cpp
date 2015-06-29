@@ -391,11 +391,11 @@ int8_t SIM908Client::startGPS(){
     }
 }
 
-int8_t SIM908Client::getGPS(){
+char* SIM908Client::getGPS(){
 
     int8_t counter, answer;
     long previous;
-    char frame[200];
+    char frame[100];
     char latitude[15];
     char longitude[15];
     char date[16];
@@ -403,6 +403,9 @@ int8_t SIM908Client::getGPS(){
     // First get the NMEA string
     // Clean the input buffer
     while( _modem.available() > 0) _modem.read();
+    delay(1000);
+    _modem.print(F("+++"));
+    delay(500);
     // request Basic string
     sendAndAssert(F("AT+CGPSINF=0"), F("AT+CGPSINF=0\r\n\r\n"), 2000, 1, 1000);
     counter = 0;
@@ -433,8 +436,9 @@ int8_t SIM908Client::getGPS(){
 
     convert2Degrees(latitude);
     convert2Degrees(longitude);
-
-    return answer;
+    sprintf(frame,"lat:%s\tlon:%s\ttime:%s",latitude,longitude,date);
+    _modem.println("ATO");
+    return frame;
 }
 
 /* convert2Degrees ( input ) - performs the conversion from input
