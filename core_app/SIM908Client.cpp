@@ -437,7 +437,8 @@ char* SIM908Client::getGPS(){
     convert2Degrees(latitude);
     convert2Degrees(longitude);
     sprintf(frame,"lat:%s\tlon:%s\ttime:%s",latitude,longitude,date);
-    _modem.println("ATO");
+    _modem.println(frame);
+    _modem.println(F("ATO"));
     return frame;
 }
 
