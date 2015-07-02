@@ -100,7 +100,9 @@ void SIM908Client::begin(int speed)
     // factory settings
     if (sendAndAssert(F("AT&F"), F("OK"), 1000, 3) != _S908_RECV_OK)
         return;
-
+    // authomatic band selection
+    if (sendAndAssert(F("AT+PACSP=1"), F("OK"), 3000, 3) != _S908_RECV_OK)
+        return;
     // flow control
     if (sendAndAssert(F("AT+IFC=1,1"), F("OK"), 1000, 3) != _S908_RECV_OK)
         return;
@@ -272,7 +274,7 @@ void SIM908Client::flush()
 {
     if (_state != STATE_CONNECTED)
         return;
-    _modem.write((byte)0x1a);
+    //_modem.write((byte)0x1a);
     _modem.flush();
 }
 
@@ -414,7 +416,7 @@ char* SIM908Client::getGPS(){
     previous = millis();
     // this loop waits for the NMEA string
     do{
-        if(_modem.available() != 0){
+        if(_modem.available()){
             frame[counter] = _modem.read();
             counter++;
             // check if the desired answer is in the response of the module
@@ -425,7 +427,7 @@ char* SIM908Client::getGPS(){
         }
       // Waits for the asnwer with time out
     } while((answer == 0) && ((millis() - previous) < 2000));
-
+    _modem.flush();
     frame[counter-3] = '\0';
     // Parses the string
     strtok(frame, ",");
@@ -436,8 +438,7 @@ char* SIM908Client::getGPS(){
 
     convert2Degrees(latitude);
     convert2Degrees(longitude);
-    sprintf(frame,"lat:%s\tlon:%s\ttime:%s",latitude,longitude,date);
-    _modem.println(frame);
+    sprintf(frame,"lat:%slon:%sdate:%s",latitude,longitude,date);
     _modem.println(F("ATO"));
     return frame;
 }

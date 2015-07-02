@@ -77,7 +77,8 @@ void setup()
     pinMode(ledPin, OUTPUT);
     pinMode (Ativar,INPUT);
     //Vibration
-//    pinMode(vibra, INPUT);
+    pinMode(vibra, INPUT);
+    
     delay(500);
     calibrateAccel();
     simClient.begin(9600);
@@ -91,7 +92,7 @@ void initModule()
         //starting client with baud rate 9600
         
         //starting GPS module
-        simClient.startGPS();
+        //simClient.startGPS();
        
         //attaching GPRS network and creating a web connection
         simClient.attach(apn,usr,psw);
@@ -112,8 +113,7 @@ void loop()
      // If the button is pressed, initialise and recalibrate the Accelerometer limits.  
      if(ativa && !calibrate)
      {
-         calibrateAccel();
-         curState = ALARM_ON;
+         activateAlarm();
      }else if(!ativa && calibrate)
      {
          calibrate = false;
@@ -159,6 +159,7 @@ void msg_callback(char* topic, byte* payload, unsigned int length)
         }
         default:{
           //default case
+          break;
         }
     }
 }
@@ -206,7 +207,7 @@ void handleAlarmOn()
 {
     // Once the accelerometer is calibrated - check for movement 
      if(checkMotion() || vibration() || checkDoors()){
-         curState = ALARM_BUZZ;
+         buzzAlarm();
      }
 }
 
