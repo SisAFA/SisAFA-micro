@@ -14,7 +14,7 @@
 #include <SoftwareSerial.h>
 #include <PubSubClient.h>
 #include "SIM908Client.h"
-#include "Timer.h"
+#include "Timer.h"31
 
 #define ALARM_OFF  0
 #define ALARM_ON   1
@@ -39,6 +39,9 @@ const int ledPin = 8; // LED connected to Digital 8
 int tolerance=40; // Sensitivity of the Alarm
 boolean calibrate = false; // When accelerometer is calibrated - changes to true 
 boolean shouldAlarm = false; // When motion is detected - changes to true
+
+//Fuel Control
+const int fuelPin = 6;
 
 //Accelerometer limits
 int xMin; //Minimum x Value
@@ -73,12 +76,15 @@ int alarmLoopTime = 60000; //1 minute
 
 void setup()
 {
-    //Initilise LED Pin
+    
+    //Set the LED Pin
     pinMode(ledPin, OUTPUT);
     pinMode (Ativar,INPUT);
     //Vibration
     pinMode(vibra, INPUT);
-    
+    //Set the Fuel pin
+    pinMode(fuelPin, OUTPUT);
+       
     delay(500);
     calibrateAccel();
     simClient.begin(9600);
@@ -118,6 +124,7 @@ void loop()
      {
          calibrate = false;
          curState = ALARM_OFF;
+         deactivateAlarm();
      }
     
     switch(curState){
@@ -169,9 +176,10 @@ void activateAlarm()
 {
     if(curState != ALARM_ON)
     {
+        curState = ALARM_ON;
         // deactivate buzz
         // deactivate ignition/fuel
-        curState = ALARM_ON;
+        digitalWrite(fuelPin, LOW);
         mqttClient.publish(statusTopic,"0");
         calibrateAccel();
     }
@@ -182,9 +190,10 @@ void deactivateAlarm()
     if(curState != ALARM_OFF)
     {
         curState = ALARM_OFF;
-        mqttClient.publish(statusTopic,"1");
         // deactivate alarm
         // activate ignition/fuel
+        digitalWrite(fuelPin, HIGH);
+        mqttClient.publish(statusTopic,"1");
     }
 }
 
@@ -225,10 +234,10 @@ void handleAlarmBuzz()
 
 //Function used to make the alarm sound, and blink the LED.
 void alarm(){
- // sound the alarm and blink LED
- digitalWrite(ledPin, HIGH);
- buzz(10,500,600);
- digitalWrite(ledPin, LOW);
+    // sound the alarm and blink LED
+    digitalWrite(ledPin, HIGH);
+    buzz(10,500,600);
+    digitalWrite(ledPin, LOW);
 }
 
 void sendGps() 
@@ -296,7 +305,8 @@ boolean vibration()
 }
 
 //This is the function used to sound the buzzer
-  void buzz(int reps, int rate, int wait){
+void buzz(int reps, int rate, int wait)
+{
     for(int i=0; i<reps; i++){
       tone(buzzerPin, 10);
       delay(100);
