@@ -14,7 +14,6 @@
 #include <SoftwareSerial.h>
 #include <PubSubClient.h>
 #include "SIM908Client.h"
-#include "Timer.h"31
 
 #define ALARM_OFF  0
 #define ALARM_ON   1
@@ -22,13 +21,13 @@
 
 #define MAX_TRYIES 3
 
-//Movement detection 
+//Movement detection
 const int Ativar = 10; // Alarm button ativation connected to Digital 10
 const int buzzerPin = A1; // buzzer Pin connected to Analog 1
 const int interruptor1 = A0; // interruptor do sensor de porta para Analog 0
 const int interruptor2 = A2; // interruptor do sensor de porta para Analog 2
 const int vibra = 2;
-    
+
 //Accelerometer Pins
 const int x = A3; // X pin connected to Analog 3
 const int y = A4; // Y pin connected to Analog 4
@@ -37,7 +36,7 @@ const int z = A5; // Z pin connected to Analog 5
 //Alarm LED
 const int ledPin = 8; // LED connected to Digital 8
 int tolerance=40; // Sensitivity of the Alarm
-boolean calibrate = false; // When accelerometer is calibrated - changes to true 
+boolean calibrate = false; // When accelerometer is calibrated - changes to true
 boolean shouldAlarm = false; // When motion is detected - changes to true
 
 //Fuel Control
@@ -76,7 +75,7 @@ int alarmLoopTime = 60000; //1 minute
 
 void setup()
 {
-    
+
     //Set the LED Pin
     pinMode(ledPin, OUTPUT);
     pinMode (Ativar,INPUT);
@@ -84,7 +83,7 @@ void setup()
     pinMode(vibra, INPUT);
     //Set the Fuel pin
     pinMode(fuelPin, OUTPUT);
-       
+
     delay(500);
     calibrateAccel();
     simClient.begin(9600);
@@ -96,27 +95,28 @@ void initModule()
      boolean subscribed = false;
      while(!subscribed){
         //starting client with baud rate 9600
-        
+        simClient.begin(9600);
+
         //starting GPS module
-        //simClient.startGPS();
-       
+        simClient.startGPS();
+
         //attaching GPRS network and creating a web connection
         simClient.attach(apn,usr,psw);
-        
+
         //setup used message protocol
         if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
             //when connected, must subscribe topic power
             subscribed = mqttClient.subscribe(pwrTopic);
         }
-    }  
+    }
 }
 
 void loop()
 {
     mqttClient.loop();
-    
+
     boolean ativa = digitalRead(Ativar);
-     // If the button is pressed, initialise and recalibrate the Accelerometer limits.  
+     // If the button is pressed, initialise and recalibrate the Accelerometer limits.
      if(ativa && !calibrate)
      {
          activateAlarm();
@@ -126,7 +126,7 @@ void loop()
          curState = ALARM_OFF;
          deactivateAlarm();
      }
-    
+
     switch(curState){
         case ALARM_OFF:{
             handleAlarmOff();
@@ -214,7 +214,7 @@ void handleAlarmOff()
 
 void handleAlarmOn()
 {
-    // Once the accelerometer is calibrated - check for movement 
+    // Once the accelerometer is calibrated - check for movement
      if(checkMotion() || vibration() || checkDoors()){
          buzzAlarm();
      }
@@ -222,12 +222,12 @@ void handleAlarmOn()
 
 boolean checkDoors()
 {
-     return (analogRead(interruptor1)>500 
+     return (analogRead(interruptor1)>500
      || analogRead(interruptor2)>500);
 }
 
 void handleAlarmBuzz()
-{  
+{
     alarm();
     sendGps();
 }
@@ -240,7 +240,7 @@ void alarm(){
     digitalWrite(ledPin, LOW);
 }
 
-void sendGps() 
+void sendGps()
 {
     digitalWrite(ledPin, HIGH);
     tone(buzzerPin, 10);
@@ -259,20 +259,20 @@ void calibrateAccel(){
         xVal = analogRead(x);
         xMax=xVal+tolerance;
         xMin=xVal-tolerance;
-      
+
         //  Calibrate Y Values
         yVal = analogRead(y);
         yMax=yVal+tolerance;
         yMin=yVal-tolerance;
-      
+
         // Calibrate Z Values
         zVal = analogRead(z);
         zMax=zVal+tolerance;
         zMin=zVal-tolerance;
-      
+
         //Delay 10msec between readings
         delay(10);
-    } 
+    }
     //End of calibration sequence sound. ARMED.
     buzz(2,40,600);
     calibrate=true;
@@ -284,15 +284,15 @@ boolean checkMotion(){
      xVal = analogRead(x);
      yVal = analogRead(y);
      zVal = analogRead(z);
-     
+
      if(xVal > xMax|| xVal < xMin){
          tempB=true;
      }
-     
+
      if(yVal > yMax || yVal < yMin){
          tempB=true;
      }
-     
+
      if(zVal > zMax || zVal < zMin){
          tempB=true;
      }
