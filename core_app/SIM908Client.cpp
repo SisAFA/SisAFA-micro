@@ -379,7 +379,7 @@ int8_t SIM908Client::startGPS(){
     // waits for fixed GPS position
     while( sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 2D Fix"), 5000, 30, 1000) &&
         sendAndAssert(F("AT+CGPSSTATUS?"), F("Location 3D Fix"), 5000, 30, 1000)&&
-        ((millis() - previous) < 120000));
+        ((millis() - previous) < 10000));
 
     start = millis();
 
@@ -409,7 +409,9 @@ char* SIM908Client::getGPS(){
     _modem.print(F("+++"));
     delay(500);
     // request Basic string
-    sendAndAssert(F("AT+CGPSINF=0"), F("AT+CGPSINF=0\r\n\r\n"), 2000, 1, 1000);
+    voidReadBuffer();
+    _modem.println(F("AT+CGPSINF=0"));
+    _modem.flush();
     counter = 0;
     answer = 0;
     memset(frame, '\0', 100);    // Initialize the string
@@ -438,8 +440,8 @@ char* SIM908Client::getGPS(){
 
     convert2Degrees(latitude);
     convert2Degrees(longitude);
-    sprintf(frame,"lat:%slon:%sdate:%s",latitude,longitude,date);
-    _modem.println(F("ATO"));
+    sprintf(frame,"lat:%s,lon:%s,date:%s",latitude,longitude,date);
+    sendAndAssert(F("ATO0"), F("CONNECT"), 500, 1, 500);
     return frame;
 }
 

@@ -1,6 +1,6 @@
 /*
 * Description:
-* Initial sketch for configuring MQTT message comunication
+* startial sketch for configuring MQTT message comunication
 *
 * Steps:
 *        1. Turn the S1 switch to the Prog(right side)
@@ -15,34 +15,30 @@
 #include <PubSubClient.h>
 #include "SIM908Client.h"
 
+//state machine defstartion
 #define ALARM_OFF  0
 #define ALARM_ON   1
 #define ALARM_BUZZ 2
 
-#define MAX_TRYIES 3
-
-//Movement detection
-const int Ativar = 10; // Alarm button ativation connected to Digital 10
-const int buzzerPin = A1; // buzzer Pin connected to Analog 1
-const int interruptor1 = A0; // interruptor do sensor de porta para Analog 0
-const int interruptor2 = A2; // interruptor do sensor de porta para Analog 2
-const int vibra = 2;
-
-//Accelerometer Pins
+/*================================ Analog pins =========================================*/
+const int buzzerPin = A2; // buzzer Pin connected to Analog 1
 const int x = A3; // X pin connected to Analog 3
 const int y = A4; // Y pin connected to Analog 4
 const int z = A5; // Z pin connected to Analog 5
 
-//Alarm LED
-const int ledPin = 8; // LED connected to Digital 8
-int tolerance=40; // Sensitivity of the Alarm
-boolean calibrate = false; // When accelerometer is calibrated - changes to true
+/*================================ Digital pins ========================================*/
+const int start = 10;         // Alarm button enabletion connected to Digital 10
+const int interrupter = 9;   // Doors interrupters pin
+const int vibra = 8;         // checkVibrate sensor pin
+const int fuel = 6;          //fuel Control
+
+/*============================= controll variables =====================================*/
+int tolerance = 40;          // Sensitivity of the Alarm
+boolean calibrate = false;   // When accelerometer is calibrated - changes to true
 boolean shouldAlarm = false; // When motion is detected - changes to true
+int curState = ALARM_OFF;    // Alarm machine state
 
-//Fuel Control
-const int fuelPin = 6;
-
-//Accelerometer limits
+/*============================ Accelerometer limits ====================================*/
 int xMin; //Minimum x Value
 int xMax; //Maximum x Value
 int xVal; //Current x Value
@@ -53,79 +49,48 @@ int zMin; //Minimum z Value
 int zMax; //Maximum z Value
 int zVal; //Current z Value
 
-//Internet Connection
+/*============================ Internet Connection =====================================*/
 byte server[] = { 107, 170, 177, 5 }; // matheusfonseca.me
 int  port = 1883;
 char *apn = "zap.vivo.com.br";
 char *usr = "vivo";
 char *psw = "vivo";
 
-//MQTT topics
+/*=============================== MQTT Topics ==========================================*/
 char *pwrTopic = "sisafa_test/power";
-char *statusTopic = "sisafa_test/status";
+char *stsTopic = "sisafa_test/status";
 char *gpsTopic = "sisafa_test/gps";
 
-//Clients
+/*================================= Clients ============================================*/
 SIM908Client simClient(0,1,5,4,3);
 PubSubClient mqttClient(server, port, msg_callback, simClient);
 
-//control variables
-int curState = ALARM_OFF;
-int alarmLoopTime = 60000; //1 minute
-
 void setup()
 {
-
-    //Set the LED Pin
-    pinMode(ledPin, OUTPUT);
-    pinMode (Ativar,INPUT);
-    //Vibration
+    //Setup pins
+    pinMode (start,INPUT);
     pinMode(vibra, INPUT);
-    //Set the Fuel pin
-    pinMode(fuelPin, OUTPUT);
-
+    pinMode(interrupter, INPUT);
+    pinMode(fuel, OUTPUT);
+    
     delay(500);
+
+    setInputPins();    
+    setFuel(true);
     calibrateAccel();
-    simClient.begin(9600);
-    initModule();
-}
-
-void initModule()
-{
-     boolean subscribed = false;
-     while(!subscribed){
-        //starting client with baud rate 9600
-        simClient.begin(9600);
-
-        //starting GPS module
-        simClient.startGPS();
-
-        //attaching GPRS network and creating a web connection
-        simClient.attach(apn,usr,psw);
-
-        //setup used message protocol
-        if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
-            //when connected, must subscribe topic power
-            subscribed = mqttClient.subscribe(pwrTopic);
-        }
-    }
+    startModule();
 }
 
 void loop()
 {
     mqttClient.loop();
 
-    boolean ativa = digitalRead(Ativar);
-     // If the button is pressed, initialise and recalibrate the Accelerometer limits.
-     if(ativa && !calibrate)
-     {
+    boolean enable = digitalRead(start);
+     // If the button is pressed, start and recalibrate the Accelerometer limits.
+     if(enable && !calibrate)
          activateAlarm();
-     }else if(!ativa && calibrate)
-     {
-         calibrate = false;
-         curState = ALARM_OFF;
+     else if(!enable && calibrate)
          deactivateAlarm();
-     }
 
     switch(curState){
         case ALARM_OFF:{
@@ -146,7 +111,7 @@ void loop()
     }
 }
 
-//function for handling messages recieved from the server
+/*====================== Handling Recieved Messages ==================================*/
 void msg_callback(char* topic, byte* payload, unsigned int length)
 {
     // first char from payload converted from ASCII to int [0-9]
@@ -171,39 +136,35 @@ void msg_callback(char* topic, byte* payload, unsigned int length)
     }
 }
 
-//setting states
+/*=============================== Setting States =======================================*/
 void activateAlarm()
 {
     if(curState != ALARM_ON)
     {
         curState = ALARM_ON;
         // deactivate buzz
-        // deactivate ignition/fuel
-        digitalWrite(fuelPin, LOW);
-        mqttClient.publish(statusTopic,"0");
+        // deactivate ignition/start
+        digitalWrite(fuel, LOW);
+        mqttClient.publish(stsTopic,"0");
         calibrateAccel();
     }
 }
 
 void deactivateAlarm()
 {
+    calibrate = false;
     if(curState != ALARM_OFF)
     {
         curState = ALARM_OFF;
-        // deactivate alarm
-        // activate ignition/fuel
-        digitalWrite(fuelPin, HIGH);
-        mqttClient.publish(statusTopic,"1");
+        digitalWrite(fuel, HIGH);
+        mqttClient.publish(stsTopic,"1");
     }
 }
 
 void buzzAlarm()
 {
-    if(curState != ALARM_OFF)
-    {
-        curState = ALARM_BUZZ;
-        mqttClient.publish(statusTopic,"2");
-    }
+    curState = ALARM_BUZZ;
+    mqttClient.publish(stsTopic,"2");
 }
 
 //handle alarm state
@@ -215,15 +176,14 @@ void handleAlarmOff()
 void handleAlarmOn()
 {
     // Once the accelerometer is calibrated - check for movement
-     if(checkMotion() || vibration() || checkDoors()){
+     if(checkMotion() || checkVibrate() || checkDoors()){
          buzzAlarm();
      }
 }
 
 boolean checkDoors()
 {
-     return (analogRead(interruptor1)>500
-     || analogRead(interruptor2)>500);
+    return (analogRead(interrupter));
 }
 
 void handleAlarmBuzz()
@@ -234,24 +194,73 @@ void handleAlarmBuzz()
 
 //Function used to make the alarm sound, and blink the LED.
 void alarm(){
-    // sound the alarm and blink LED
-    digitalWrite(ledPin, HIGH);
     buzz(10,500,600);
-    digitalWrite(ledPin, LOW);
 }
 
 void sendGps()
 {
-    digitalWrite(ledPin, HIGH);
     tone(buzzerPin, 10);
     mqttClient.publish(gpsTopic,simClient.getGPS());
     noTone(buzzerPin);
-    digitalWrite(ledPin, LOW);
+    delay(500);
+}
+
+//Function used to detect motion. Tolerance variable adjusts the sensitivity of movement detected.
+boolean checkMotion(){
+     boolean tempB=false;
+     xVal = analogRead(x);
+     yVal = analogRead(y);
+     zVal = analogRead(z);
+
+     if(xVal > xMax|| xVal < xMin){
+         tempB=true;
+     }
+
+     if(yVal > yMax || yVal < yMin){
+         tempB=true;
+     }
+
+     if(zVal > zMax || zVal < zMin){
+         tempB=true;
+     }
+   return tempB;
+}
+
+boolean checkVibrate()
+{
+     return digitalRead(vibra);
+}
+
+//This is the function used to sound the buzzer
+void buzz(int reps, int rate, int wait)
+{
+    for(int i=0; i<reps; i++){
+      tone(buzzerPin, 10);
+      delay(100);
+      noTone(buzzerPin);
+      delay(rate);
+    }
+    delay(wait);
+}
+
+/*============================= Setup Functions ======================================*/
+void setInputPins()
+{
+    //all input pins should be initialized here
+    digitalWrite(interrupter,LOW);
+}  
+
+void setFuel(boolean op) 
+{
+   if(op) 
+       digitalWrite(fuel,HIGH);
+   else
+       digitalWrite(fuel,LOW);
 }
 
 // Function used to calibrate the Accelerometer
 void calibrateAccel(){
-    // Calibration sequence initialisation sound - 3 seconds before calibration begins
+    // Calibration sequence startialisation sound - 3 seconds before calibration begins
     buzz(1,150,400);
     //calibrate the Accelerometer (should take about 0.5 seconds)
     for (int i=0; i<50; i++){
@@ -274,44 +283,28 @@ void calibrateAccel(){
         delay(10);
     }
     //End of calibration sequence sound. ARMED.
-    buzz(2,40,600);
     calibrate=true;
 }
 
-//Function used to detect motion. Tolerance variable adjusts the sensitivity of movement detected.
-boolean checkMotion(){
-     boolean tempB=false;
-     xVal = analogRead(x);
-     yVal = analogRead(y);
-     zVal = analogRead(z);
-
-     if(xVal > xMax|| xVal < xMin){
-         tempB=true;
-     }
-
-     if(yVal > yMax || yVal < yMin){
-         tempB=true;
-     }
-
-     if(zVal > zMax || zVal < zMin){
-         tempB=true;
-     }
-     return tempB;
-}
-
-boolean vibration()
+void startModule()
 {
-     return digitalRead(vibra);
-}
+     boolean subscribed = false;
+     while(!subscribed){
+        //starting client with baud rate 9600
+        simClient.begin(9600);
 
-//This is the function used to sound the buzzer
-void buzz(int reps, int rate, int wait)
-{
-    for(int i=0; i<reps; i++){
-      tone(buzzerPin, 10);
-      delay(100);
-      noTone(buzzerPin);
-      delay(rate);
+        //starting GPS module
+        //simClient.startGPS();
+
+        //attaching GPRS network and creating a web connection
+        simClient.attach(apn,usr,psw);
+
+        //setup used message protocol
+        if (mqttClient.connect("10k2D129", "sisafa_test", "T5KIP1")) {
+            //when connected, must subscribe topic power
+            subscribed = mqttClient.subscribe(pwrTopic);
+        }
     }
-    delay(wait);
+    buzz(2,40,600);
 }
+
