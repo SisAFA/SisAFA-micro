@@ -21,22 +21,23 @@
 #define ALARM_BUZZ 2
 
 /*================================ Analog pins =========================================*/
-const int buzzerPin = A2; // buzzer Pin connected to Analog 1
-const int x = A3; // X pin connected to Analog 3
-const int y = A4; // Y pin connected to Analog 4
-const int z = A5; // Z pin connected to Analog 5
+const int buzzerPin = A0; // buzzer Pin connected to Analog 1
+const int z = A2; // Z pin connected to Analog 2
+const int y = A3; // Y pin connected to Analog 3
+const int x = A4; // X pin connected to Analog 4
 
 /*================================ Digital pins ========================================*/
-const int start = 10;         // Alarm button enabletion connected to Digital 10
+const int start = 8;         // Alarm button enabletion connected to Digital 10
 const int interrupter = 9;   // Doors interrupters pin
-const int vibra = 8;         // checkVibrate sensor pin
-const int fuel = 6;          //fuel Control
+const int fuel = 10;          //fuel Control
+const int vibra = 13;         // checkVibrate sensor pin
 
 /*============================= controll variables =====================================*/
 int tolerance = 40;          // Sensitivity of the Alarm
 boolean calibrate = false;   // When accelerometer is calibrated - changes to true
 boolean shouldAlarm = false; // When motion is detected - changes to true
 int curState = ALARM_OFF;    // Alarm machine state
+boolean sendGpsData = false;     // need to send gps data
 
 /*============================ Accelerometer limits ====================================*/
 int xMin; //Minimum x Value
@@ -67,15 +68,8 @@ PubSubClient mqttClient(server, port, msg_callback, simClient);
 
 void setup()
 {
-    //Setup pins
-    pinMode (start,INPUT);
-    pinMode(vibra, INPUT);
-    pinMode(interrupter, INPUT);
-    pinMode(fuel, OUTPUT);
-    
+    setPins();    
     delay(500);
-
-    setInputPins();    
     setFuel(true);
     calibrateAccel();
     startModule();
@@ -147,6 +141,7 @@ void activateAlarm()
         digitalWrite(fuel, LOW);
         mqttClient.publish(stsTopic,"0");
         calibrateAccel();
+        sendGpsData=false;
     }
 }
 
@@ -164,6 +159,7 @@ void deactivateAlarm()
 void buzzAlarm()
 {
     curState = ALARM_BUZZ;
+    sendGpsData = true;
     mqttClient.publish(stsTopic,"2");
 }
 
@@ -183,7 +179,7 @@ void handleAlarmOn()
 
 boolean checkDoors()
 {
-    return (analogRead(interrupter));
+    return digitalRead(interrupter);
 }
 
 void handleAlarmBuzz()
@@ -199,10 +195,13 @@ void alarm(){
 
 void sendGps()
 {
-    tone(buzzerPin, 10);
-    mqttClient.publish(gpsTopic,simClient.getGPS());
-    noTone(buzzerPin);
-    delay(500);
+    if(sendGpsData) {
+      tone(buzzerPin, 100);
+      mqttClient.publish(gpsTopic,simClient.getGPS());
+      sendGpsData = false;
+      noTone(buzzerPin);
+      delay(500);  
+    }
 }
 
 //Function used to detect motion. Tolerance variable adjusts the sensitivity of movement detected.
@@ -244,10 +243,22 @@ void buzz(int reps, int rate, int wait)
 }
 
 /*============================= Setup Functions ======================================*/
-void setInputPins()
+void setPins()
 {
+  //Setup pins
+    pinMode (start,INPUT);
+    pinMode(vibra, INPUT);
+    pinMode(interrupter, INPUT);
+    pinMode(A1, OUTPUT);
+    pinMode(fuel, OUTPUT);
+    pinMode(11, OUTPUT);
+    pinMode(12, OUTPUT);
+   
     //all input pins should be initialized here
     digitalWrite(interrupter,LOW);
+    digitalWrite(A1, LOW);
+    digitalWrite(11, HIGH);
+    digitalWrite(12, LOW);
 }  
 
 void setFuel(boolean op) 
@@ -294,7 +305,7 @@ void startModule()
         simClient.begin(9600);
 
         //starting GPS module
-        //simClient.startGPS();
+        simClient.startGPS();
 
         //attaching GPRS network and creating a web connection
         simClient.attach(apn,usr,psw);
